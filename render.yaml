@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hinov-group
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_SUPABASE_URL
+        value: https://cqhikivkqxzbiuhmrfyo.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxaGlraXZrcXh6Yml1aG1yZnlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4ODYzMjksImV4cCI6MjEwNDQ2MjMyOX0.35YuQ3MVqfnCYasK3cEqPm26aeTtXPlOIVDi0JyjW0k
