@@ -18,19 +18,8 @@ import {
   KeyRound,
   CheckCircle2,
   HelpCircle,
-  Briefcase,
-  Layers,
-  Sparkles,
   LogOut,
 } from 'lucide-react';
-
-interface PresetAccount {
-  label: string;
-  roleDescription: string;
-  email: string;
-  password: string;
-  badgeColor: string;
-}
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -99,31 +88,6 @@ export const AdminLoginPage: React.FC = () => {
       setLoading(false);
       setError('Une erreur de connexion est survenue.');
     }
-  };
-
-  const handleQuickLogin = async (preset: PresetAccount) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setError('');
-    setLoading(true);
-
-    try {
-      const result = await store.login(preset.email, preset.password);
-      setLoading(false);
-      if (result.success) {
-        navigate(fromPath, { replace: true });
-      } else {
-        setError(result.error || 'Connexion échouée.');
-      }
-    } catch (err) {
-      setLoading(false);
-    }
-  };
-
-  const handleFillCredentials = (preset: PresetAccount) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setError('');
   };
 
   return (
@@ -304,58 +268,6 @@ export const AdminLoginPage: React.FC = () => {
               </Button>
             </div>
           </form>
-
-          {/* Quick Access Profiles / Demo accounts */}
-          <div className="pt-5 border-t border-black/10 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={13} className="text-[#F28D1A]" />
-                Comptes autorisés & Accès rapide
-              </span>
-              <span className="text-[10px] text-[#5F6673]">1-clic</span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2.5">
-              {PRESET_ACCOUNTS.map((preset) => (
-                <div
-                  key={preset.email}
-                  className="p-3 rounded-xl border border-black/10 bg-[#F5F7FA] hover:bg-white hover:border-[#4A94D1]/50 hover:shadow-sm transition-all group flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[#111111]">{preset.label}</span>
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${preset.badgeColor}`}
-                      >
-                        {preset.email.split('@')[0]}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#5F6673] truncate">{preset.roleDescription}</p>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleFillCredentials(preset)}
-                      className="px-2 py-1 text-[11px] font-bold text-[#5F6673] hover:text-[#111111] hover:bg-black/5 rounded-md transition-colors cursor-pointer"
-                      title="Remplir les champs"
-                    >
-                      Remplir
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickLogin(preset)}
-                      className="px-2.5 py-1 text-[11px] font-bold bg-[#111111] text-white hover:bg-[#4A94D1] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                      title="Connexion directe"
-                    >
-                      <span>Entrer</span>
-                      <ArrowRight size={11} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </Card>
 
         {/* Security badges */}
