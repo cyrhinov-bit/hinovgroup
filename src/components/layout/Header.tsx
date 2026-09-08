@@ -93,7 +93,7 @@ export const Header: React.FC = () => {
             : 'bg-white py-4'
         }`}
         style={{
-          borderBottom: scrolled ? '2px solid transparent' : '2px solid transparent',
+          borderBottom: scrolled ? '3px solid transparent' : '3px solid transparent',
           backgroundImage: scrolled
             ? 'linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), linear-gradient(to right, #4A94D1, #4AD07B, #E8A020, #B026C8)'
             : 'linear-gradient(white, white), linear-gradient(to right, #4A94D1, #4AD07B, #E8A020, #B026C8)',
@@ -220,7 +220,7 @@ export const Header: React.FC = () => {
           <div
             className="lg:hidden bg-white px-4 pt-3 pb-6 space-y-3 animate-in slide-in-from-top duration-200"
             style={{
-              borderTop: '2px solid transparent',
+              borderTop: '3px solid transparent',
               backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #4A94D1, #4AD07B, #E8A020, #B026C8)',
               backgroundOrigin: 'border-box',
               backgroundClip: 'padding-box, border-box',
