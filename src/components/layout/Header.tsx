@@ -102,10 +102,22 @@ export const Header: React.FC = () => {
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <HinovLogo size={scrolled ? 'sm' : 'md'} logoSrc={settings.logo_url} />
-          </Link>
+          {/* Logo — marquee défilement gauche → droite en boucle */}
+          <div
+            className="marquee-wrapper"
+            style={{ maxWidth: scrolled ? 220 : 260 }}
+          >
+            <div className="marquee-track">
+              {/* Copie 1 */}
+              <Link to="/" className="flex items-center gap-3 pr-10" tabIndex={0}>
+                <HinovLogo size={scrolled ? 'sm' : 'md'} logoSrc={settings.logo_url} />
+              </Link>
+              {/* Copie 2 — aria-hidden pour l'accessibilité */}
+              <Link to="/" className="flex items-center gap-3 pr-10" tabIndex={-1} aria-hidden="true">
+                <HinovLogo size={scrolled ? 'sm' : 'md'} logoSrc={settings.logo_url} />
+              </Link>
+            </div>
+          </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
