@@ -52,8 +52,8 @@ export const AdminLoginPage: React.FC = () => {
     {
       label: 'Super Administrateur',
       roleDescription: 'Accès intégral à toutes les fonctionnalités & paramètres',
-      email: 'admin@hinovgroup.com',
-      password: 'hinov2025',
+      email: 'yo.hinovgroup@hinovgroup.com',
+      password: 'yohinovgroup2026',
       badgeColor: 'bg-[#4A94D1] text-white',
     },
     {

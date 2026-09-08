@@ -396,6 +396,11 @@ class StoreService {
       string,
       { pass: string; role: 'SUPER_ADMIN' | 'EDITOR' | 'CATALOG_MANAGER'; name: string }
     > = {
+      'yo.hinovgroup@hinovgroup.com': {
+        pass: 'yohinovgroup2026',
+        role: 'SUPER_ADMIN',
+        name: 'Directeur Général (Super Admin)',
+      },
       'admin@hinovgroup.com': {
         pass: 'hinov2025',
         role: 'SUPER_ADMIN',
