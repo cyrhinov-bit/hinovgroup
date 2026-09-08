@@ -89,9 +89,17 @@ export const Header: React.FC = () => {
       <header
         className={`sticky top-0 z-40 transition-all duration-300 ${
           scrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-black/10 py-3'
-            : 'bg-white border-b border-black/5 py-4'
+            ? 'bg-white/95 backdrop-blur-md shadow-sm py-3'
+            : 'bg-white py-4'
         }`}
+        style={{
+          borderBottom: scrolled ? '2px solid transparent' : '2px solid transparent',
+          backgroundImage: scrolled
+            ? 'linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), linear-gradient(to right, #4A94D1, #4AD07B, #E8A020, #B026C8)'
+            : 'linear-gradient(white, white), linear-gradient(to right, #4A94D1, #4AD07B, #E8A020, #B026C8)',
+          backgroundOrigin: 'border-box',
+          backgroundClip: 'padding-box, border-box',
+        }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Logo */}
@@ -209,7 +217,15 @@ export const Header: React.FC = () => {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-black/10 bg-white px-4 pt-3 pb-6 space-y-3 animate-in slide-in-from-top duration-200">
+          <div
+            className="lg:hidden bg-white px-4 pt-3 pb-6 space-y-3 animate-in slide-in-from-top duration-200"
+            style={{
+              borderTop: '2px solid transparent',
+              backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #4A94D1, #4AD07B, #E8A020, #B026C8)',
+              backgroundOrigin: 'border-box',
+              backgroundClip: 'padding-box, border-box',
+            }}
+          >
             <nav className="flex flex-col space-y-1">
               {visibleNav.map((item) => (
                 <div key={item.id}>
