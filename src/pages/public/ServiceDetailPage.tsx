@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Button } from '../../components/ui/Button';
+import { LIBRAIRIE_CATALOGUE_URL } from '../../lib/constants';
 import { Card } from '../../components/ui/Card';
 import {
   Monitor,
@@ -91,11 +92,11 @@ export const ServiceDetailPage: React.FC = () => {
                   </Button>
                 </Link>
                 {service.slug === 'librairie-papeterie' && (
-                  <Link to="/catalogue">
+                  <a href={LIBRAIRIE_CATALOGUE_URL} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" size="lg" leftIcon={<ShoppingBag size={18} />}>
                       Voir le catalogue produits
                     </Button>
-                  </Link>
+                  </a>
                 )}
               </div>
             </div>

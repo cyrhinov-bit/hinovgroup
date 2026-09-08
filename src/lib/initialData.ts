@@ -9,7 +9,7 @@ import {
   FooterSection,
   MediaItem,
 } from '../types';
-
+import { LIBRAIRIE_CATALOGUE_URL } from './constants';
 export const INITIAL_SETTINGS: SiteSettings = {
   company_name: 'HINOV Group',
   tagline: 'Prestation de services & Solutions intégrées',
@@ -741,7 +741,8 @@ export const INITIAL_NAVIGATION: NavigationItem[] = [
   },
   { id: 'nav-projects', label: 'Réalisations', path: '/realisations', sort_order: 4, is_visible: true },
   { id: 'nav-catalog', label: 'Catalogue', path: '/catalogue', sort_order: 5, is_visible: true },
-  { id: 'nav-contact', label: 'Contact', path: '/contact', sort_order: 6, is_visible: true },
+  { id: 'nav-librairie-catalog', label: 'Catalogue Librairie', path: LIBRAIRIE_CATALOGUE_URL, sort_order: 6, is_visible: true },,
+  { id: 'nav-contact', label: 'Contact', path: '/contact', sort_order: 7, is_visible: true },
 ];
 
 export const INITIAL_FOOTER: FooterSection[] = [
@@ -768,6 +769,7 @@ export const INITIAL_FOOTER: FooterSection[] = [
       { label: 'À propos de nous', path: '/a-propos' },
       { label: 'Nos réalisations', path: '/realisations' },
       { label: 'Catalogue produits', path: '/catalogue' },
+      { label: 'Catalogue Librairie', path: LIBRAIRIE_CATALOGUE_URL },
       { label: 'Demander un devis', path: '/devis' },
       { label: 'Nous contacter', path: '/contact' },
     ],
