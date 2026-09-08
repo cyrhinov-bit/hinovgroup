@@ -1,0 +1,22 @@
+{
+  "name": "HINOV Group",
+  "short_name": "HINOV",
+  "description": "Prestation de services & Solutions intégrées - HINOV Group",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F7FA",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "HINOV Group",
+  "description": "Site vitrine professionnel et CMS administrable pour HINOV Group - Informatique, Imprimerie, Développement logiciel, Câblage réseau, Librairie & Papeterie.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
