@@ -57,8 +57,10 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
 
-        {/* Admin Login */}
+        {/* Admin Login & Aliases */}
         <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/login" element={<AdminLoginPage />} />
+        <Route path="/connexion" element={<AdminLoginPage />} />
 
         {/* Admin CMS Panel */}
         <Route path="/admin" element={<AdminLayout />}>

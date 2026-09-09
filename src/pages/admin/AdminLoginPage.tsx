@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   HelpCircle,
   LogOut,
+  Briefcase,
 } from 'lucide-react';
 
 export const AdminLoginPage: React.FC = () => {
@@ -36,6 +37,14 @@ export const AdminLoginPage: React.FC = () => {
 
   // Where to redirect after login (default to /admin)
   const fromPath = (location.state as any)?.from?.pathname || '/admin';
+
+  interface PresetAccount {
+    label: string;
+    roleDescription: string;
+    email: string;
+    password: string;
+    badgeColor: string;
+  }
 
   const PRESET_ACCOUNTS: PresetAccount[] = [
     {
