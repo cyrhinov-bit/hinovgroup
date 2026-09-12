@@ -229,8 +229,8 @@ export const AdminServicesPage: React.FC = () => {
                       imageAlt={editingService.name}
                       className="w-full h-full object-cover"
                       aspectRatioClassName="aspect-[4/3]"
-                      autoPlay={false}
-                      loop={false}
+                      autoPlay={true}
+                      loop={true}
                       muted={true}
                     />
                   </div>

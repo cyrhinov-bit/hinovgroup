@@ -206,8 +206,8 @@ export const AdminProjectsPage: React.FC = () => {
                       imageAlt={editingProject.title || ''}
                       className="w-full h-full object-cover"
                       aspectRatioClassName="aspect-[16/10]"
-                      autoPlay={false}
-                      loop={false}
+                      autoPlay={true}
+                      loop={true}
                       muted={true}
                     />
                   </div>

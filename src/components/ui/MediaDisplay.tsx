@@ -21,6 +21,30 @@ interface MediaDisplayProps {
   interactive?: boolean;
 }
 
+// Export helper for reliable video detection across the app
+export function isVideoResource(url?: string, explicitType?: 'image' | 'video'): boolean {
+  if (explicitType === 'video') return true;
+  if (explicitType === 'image') return false;
+  if (!url || typeof url !== 'string') return false;
+  const cleanUrl = url.trim().toLowerCase();
+  return (
+    cleanUrl.startsWith('blob:') ||
+    cleanUrl.startsWith('data:video/') ||
+    cleanUrl.includes('.mp4') ||
+    cleanUrl.includes('.webm') ||
+    cleanUrl.includes('.mov') ||
+    cleanUrl.includes('.ogg') ||
+    cleanUrl.includes('.m4v') ||
+    cleanUrl.includes('.mkv') ||
+    cleanUrl.includes('.avi') ||
+    cleanUrl.includes('/videos/') ||
+    cleanUrl.includes('youtube.com') ||
+    cleanUrl.includes('youtu.be') ||
+    cleanUrl.includes('vimeo.com') ||
+    cleanUrl.includes('mixkit.co/videos')
+  );
+}
+
 export const MediaDisplay: React.FC<MediaDisplayProps> = ({
   mediaType,
   imageUrl,
@@ -47,21 +71,15 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
   const isVideo =
     mediaType === 'video' ||
     Boolean(videoUrl && videoUrl.trim().length > 0) ||
-    Boolean(
-      imageUrl &&
-        (imageUrl.startsWith('blob:') ||
-          imageUrl.startsWith('data:video/') ||
-          imageUrl.includes('.mp4') ||
-          imageUrl.includes('.webm') ||
-          imageUrl.includes('.mov') ||
-          imageUrl.includes('.ogg') ||
-          imageUrl.includes('youtube.com') ||
-          imageUrl.includes('youtu.be') ||
-          imageUrl.includes('vimeo.com'))
-    );
+    isVideoResource(imageUrl, mediaType);
 
   const resolvedVideoUrl = videoUrl || (isVideo ? imageUrl : undefined);
   const resolvedImageUrl = (!isVideo ? imageUrl : undefined) || videoPosterUrl;
+
+  // Reset error state if the URL changes
+  useEffect(() => {
+    setHasError(false);
+  }, [resolvedVideoUrl, imageUrl, videoUrl]);
 
   // Check if it's an external embed (YouTube / Vimeo)
   const isYouTube = Boolean(
@@ -264,19 +282,23 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
     >
       <video
         ref={videoRef}
+        key={resolvedVideoUrl}
         src={resolvedVideoUrl}
-        poster={videoPosterUrl || resolvedImageUrl}
+        poster={videoPosterUrl || undefined}
         autoPlay={true}
         loop={true}
         muted={true}
         playsInline={true}
+        preload="auto"
         disablePictureInPicture={true}
         disableRemotePlayback={true}
         controls={false}
         tabIndex={-1}
         aria-hidden="true"
         onContextMenu={(e) => e.preventDefault()}
-        onError={() => setHasError(true)}
+        onError={(e) => {
+          console.warn('Video load notification:', resolvedVideoUrl, e);
+        }}
         onPlay={() => setIsPlaying(true)}
         onPause={handlePause}
         className="w-full h-full object-cover pointer-events-none select-none"
