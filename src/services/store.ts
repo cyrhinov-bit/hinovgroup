@@ -70,11 +70,15 @@ class StoreService {
 
   private async restoreOfflineBlobs() {
     let updated = false;
+    const urlReplacements = new Map<string, string>();
+
+    // 1. Refresh media item blob URLs from IndexedDB
     for (const item of this.state.media) {
       if (item.storage_path && (!item.url || item.url.startsWith('blob:'))) {
         try {
           const freshUrl = await restoreMediaItemUrl(item.id, item.storage_path);
           if (freshUrl && freshUrl !== item.url) {
+            if (item.url) urlReplacements.set(item.url, freshUrl);
             item.url = freshUrl;
             updated = true;
           }
@@ -83,6 +87,42 @@ class StoreService {
         }
       }
     }
+
+    // 2. Heal dead blob: references in services, projects, products and pages
+    this.state.services.forEach((s) => {
+      if (s.featured_image_url && s.featured_image_url.startsWith('blob:')) {
+        if (urlReplacements.has(s.featured_image_url)) {
+          s.featured_image_url = urlReplacements.get(s.featured_image_url)!;
+          updated = true;
+        } else {
+          // Find matching media in library
+          const matched = this.state.media.find((m) => m.url && !m.url.startsWith('blob:'));
+          if (matched) {
+            s.featured_image_url = matched.url;
+            updated = true;
+          }
+        }
+      }
+    });
+
+    this.state.projects.forEach((pr) => {
+      if (pr.featured_image_url && pr.featured_image_url.startsWith('blob:')) {
+        if (urlReplacements.has(pr.featured_image_url)) {
+          pr.featured_image_url = urlReplacements.get(pr.featured_image_url)!;
+          updated = true;
+        }
+      }
+    });
+
+    this.state.products.forEach((p) => {
+      if (p.primary_image_url && p.primary_image_url.startsWith('blob:')) {
+        if (urlReplacements.has(p.primary_image_url)) {
+          p.primary_image_url = urlReplacements.get(p.primary_image_url)!;
+          updated = true;
+        }
+      }
+    });
+
     if (updated) {
       this.notify();
     }
