@@ -187,11 +187,17 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
   };
 
   const toggleMute = (e?: React.MouseEvent) => {
-    if (!interactive) return; // Disallow interaction in visitor mode
-    if (e) e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!videoRef.current) return;
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(videoRef.current.muted);
+    const nextMuted = !videoRef.current.muted;
+    videoRef.current.muted = nextMuted;
+    setIsMuted(nextMuted);
+    if (!nextMuted && videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+    }
   };
 
   const toggleFullscreen = (e?: React.MouseEvent) => {
@@ -336,17 +342,30 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
           {badgeLabel || 'En continu • HINOV'}
         </span>
 
-        {/* Interactive Mute button ONLY if interactive mode is explicitly enabled */}
-        {interactive && showControls && (
-          <button
-            type="button"
-            onClick={toggleMute}
-            className="pointer-events-auto w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105"
-            title={isMuted ? 'Activer le son' : 'Couper le son'}
-          >
-            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} className="text-[#4AD07B]" />}
-          </button>
-        )}
+        {/* Accessible Mute / Unmute button for all visitors */}
+        <button
+          type="button"
+          onClick={toggleMute}
+          className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 backdrop-blur-md border shadow-md cursor-pointer ${
+            isMuted
+              ? 'bg-black/75 hover:bg-black text-white/90 border-white/20 hover:scale-105 hover:border-white/40'
+              : 'bg-[#4AD07B] hover:bg-[#3ebe6d] text-white border-white/30 shadow-[#4AD07B]/30'
+          }`}
+          title={isMuted ? 'Cliquer pour activer le son' : 'Cliquer pour couper le son'}
+          aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+        >
+          {isMuted ? (
+            <>
+              <VolumeX size={14} className="text-red-400 shrink-0" />
+              <span className="text-[11px] font-semibold tracking-wide">Activer le son</span>
+            </>
+          ) : (
+            <>
+              <Volume2 size={14} className="text-white shrink-0 animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-wide">Son activé</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Center play/pause indicator button ONLY if interactive mode is explicitly enabled */}
