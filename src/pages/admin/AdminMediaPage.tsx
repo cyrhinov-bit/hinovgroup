@@ -3,8 +3,9 @@ import { useStore } from '../../hooks/useStore';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { MediaPickerModal } from '../../components/admin/MediaPickerModal';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   Upload,
   Search,
@@ -15,6 +16,7 @@ import {
   Film,
   Play,
   ExternalLink,
+  Plus,
 } from 'lucide-react';
 import { MediaItem } from '../../types';
 
@@ -23,29 +25,27 @@ export const AdminMediaPage: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<'all' | 'image' | 'video'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isAddOpen, setIsAddOpen] = useState<boolean>(false);
+  const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
   const [mediaToDelete, setMediaToDelete] = useState<MediaItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  // New Media Form state
-  const [newTitle, setNewTitle] = useState('');
-  const [newUrl, setNewUrl] = useState('');
-  const [newFolder, setNewFolder] = useState('Services');
-  const [newMediaType, setNewMediaType] = useState<'image' | 'video'>('image');
-  const [newPosterUrl, setNewPosterUrl] = useState('');
+  const [previewMedia, setPreviewMedia] = useState<MediaItem | null>(null);
 
   const filteredMedia = useMemo(() => {
     return media.filter((m) => {
       const isVid =
         m.media_type === 'video' ||
         m.mime_type?.startsWith('video/') ||
-        m.url.endsWith('.mp4') ||
-        m.url.endsWith('.webm');
+        m.url.includes('.mp4') ||
+        m.url.includes('.webm') ||
+        m.url.includes('.mov') ||
+        m.url.includes('youtube.com') ||
+        m.url.includes('youtu.be') ||
+        m.url.includes('vimeo.com');
 
       if (selectedType === 'image' && isVid) return false;
       if (selectedType === 'video' && !isVid) return false;
 
-      const matchFolder = selectedFolder === 'all' || m.folder === selectedFolder;
+      const matchFolder = selectedFolder === 'all' || m.folder === selectedFolder || m.category === selectedFolder;
       const matchSearch =
         !searchTerm.trim() ||
         m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,39 +61,14 @@ export const AdminMediaPage: React.FC = () => {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleAddMedia = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUrl.trim()) return;
-
-    const isVid =
-      newMediaType === 'video' ||
-      newUrl.endsWith('.mp4') ||
-      newUrl.endsWith('.webm') ||
-      newUrl.includes('youtube.com') ||
-      newUrl.includes('youtu.be');
-
-    const fname = newUrl.split('/').pop()?.split('?')[0] || (isVid ? 'video.mp4' : 'image.jpg');
-    store.addMedia({
-      title: newTitle.trim() || (isVid ? 'Vidéo HINOV' : 'Visuel HINOV'),
-      url: newUrl.trim(),
-      filename: fname,
-      file_name: fname,
-      alt_text: newTitle.trim() || (isVid ? 'Vidéo HINOV Group' : 'Visuel HINOV Group'),
-      file_size: isVid ? 3500000 : 250000,
-      mime_type: isVid ? 'video/mp4' : 'image/jpeg',
-      media_type: isVid ? 'video' : 'image',
-      poster_url: newPosterUrl.trim() || undefined,
-      folder: newFolder,
-    });
-
-    setIsAddOpen(false);
-    setNewTitle('');
-    setNewUrl('');
-    setNewPosterUrl('');
-    setNewMediaType('image');
+  const handleDeleteConfirm = () => {
+    if (mediaToDelete) {
+      store.deleteMedia(mediaToDelete.id);
+      setMediaToDelete(null);
+    }
   };
 
-  const folders = ['all', 'Services', 'Produits', 'Réalisations', 'Bannières', 'Logos', 'Général'];
+  const folders = ['all', 'Vidéos', 'Services', 'Produits', 'Réalisations', 'Bannières', 'Logos', 'Général'];
 
   return (
     <div className="space-y-8">
@@ -102,17 +77,17 @@ export const AdminMediaPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-extrabold text-[#111111]">Médiathèque Centrale</h1>
           <p className="text-xs text-[#5F6673]">
-            Bibliothèque d'images et de courtes vidéos utilisées pour les pages, services, catalogue et réalisations.
+            Bibliothèque d'images et de vidéos utilisées pour les pages, services, catalogue et réalisations.
           </p>
         </div>
 
         <Button
           variant="primary"
           size="sm"
-          leftIcon={<Upload size={14} />}
-          onClick={() => setIsAddOpen(true)}
+          leftIcon={<Plus size={15} />}
+          onClick={() => setIsPickerOpen(true)}
         >
-          Ajouter un média (Image / Vidéo)
+          Téléverser ou Ajouter un Média
         </Button>
       </div>
 
@@ -159,7 +134,7 @@ export const AdminMediaPage: React.FC = () => {
             }`}
           >
             <Film size={13} />
-            <span>Vidéos courtes</span>
+            <span>Vidéos</span>
           </button>
         </div>
 
@@ -187,23 +162,34 @@ export const AdminMediaPage: React.FC = () => {
           const isVid =
             item.media_type === 'video' ||
             item.mime_type?.startsWith('video/') ||
-            item.url.endsWith('.mp4') ||
-            item.url.endsWith('.webm');
+            item.url.includes('.mp4') ||
+            item.url.includes('.webm') ||
+            item.url.includes('.mov') ||
+            item.url.includes('youtube.com') ||
+            item.url.includes('youtu.be') ||
+            item.url.includes('vimeo.com');
 
           return (
-            <Card key={item.id} className="overflow-hidden flex flex-col justify-between group">
-              <div className="aspect-video bg-gray-950 relative overflow-hidden flex items-center justify-center">
+            <Card key={item.id} className="overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
+              <div
+                className="aspect-video bg-gray-950 relative overflow-hidden flex items-center justify-center cursor-pointer"
+                onClick={() => setPreviewMedia(item)}
+              >
                 {isVid ? (
                   <>
-                    <video
-                      src={item.url}
-                      poster={item.poster_url}
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80"
+                    <MediaDisplay
+                      mediaType="video"
+                      videoUrl={item.url}
+                      videoPosterUrl={item.poster_url}
+                      autoPlay={false}
+                      loop={false}
+                      muted={true}
+                      showControls={false}
+                      interactive={false}
+                      className="w-full h-full object-cover"
+                      aspectRatioClassName="aspect-video"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
                       <div className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-xs text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
                         <Play size={16} className="fill-white translate-x-0.5" />
                       </div>
@@ -222,7 +208,7 @@ export const AdminMediaPage: React.FC = () => {
                       referrerPolicy="no-referrer"
                     />
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-semibold backdrop-blur-xs">
-                      {item.folder || 'Général'}
+                      {item.folder || item.category || 'Général'}
                     </span>
                   </>
                 )}
@@ -258,10 +244,10 @@ export const AdminMediaPage: React.FC = () => {
 
                   <button
                     onClick={() => setMediaToDelete(item)}
-                    className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 inline-flex items-center cursor-pointer"
-                    title="Supprimer"
+                    className="p-1.5 text-[#5F6673] hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Supprimer ce média"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
@@ -270,142 +256,28 @@ export const AdminMediaPage: React.FC = () => {
         })}
       </div>
 
-      {/* Add Media Modal */}
-      {isAddOpen && (
-        <Modal
+      {/* Media Picker Modal for uploading */}
+      {isPickerOpen && (
+        <MediaPickerModal
           isOpen={true}
-          onClose={() => setIsAddOpen(false)}
-          title="Ajouter un média (Image ou Courte Vidéo)"
-        >
-          <form onSubmit={handleAddMedia} className="space-y-4">
-            {/* Format choice */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
-                Type de média
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNewMediaType('image')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-                    newMediaType === 'image'
-                      ? 'bg-[#4A94D1] text-white border-[#4A94D1]'
-                      : 'bg-white text-[#5F6673] border-black/15'
-                  }`}
-                >
-                  <ImageIcon size={14} />
-                  <span>Image statique</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewMediaType('video')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-                    newMediaType === 'video'
-                      ? 'bg-[#4AD07B] text-white border-[#4AD07B]'
-                      : 'bg-white text-[#5F6673] border-black/15'
-                  }`}
-                >
-                  <Film size={14} />
-                  <span>Courte vidéo (MP4 / WebM)</span>
-                </button>
-              </div>
-            </div>
-
-            <Input
-              label="Titre du média"
-              placeholder={newMediaType === 'video' ? 'Ex: Démonstration câblage réseau' : 'Ex: Ordinateur portable maintenance'}
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              required
-            />
-
-            <Input
-              label={newMediaType === 'video' ? 'URL publique de la vidéo (MP4 ou WebM)' : "URL publique de l'image"}
-              placeholder={newMediaType === 'video' ? 'https://.../video.mp4' : 'https://images.unsplash.com/...'}
-              value={newUrl}
-              onChange={(e) => {
-                const url = e.target.value;
-                setNewUrl(url);
-                if (url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('youtube.com')) {
-                  setNewMediaType('video');
-                }
-              }}
-              required
-            />
-
-            {newMediaType === 'video' && (
-              <Input
-                label="URL de couverture (Poster avant lecture - optionnel)"
-                placeholder="https://.../poster.jpg"
-                value={newPosterUrl}
-                onChange={(e) => setNewPosterUrl(e.target.value)}
-              />
-            )}
-
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
-                Dossier de classement
-              </label>
-              <select
-                value={newFolder}
-                onChange={(e) => setNewFolder(e.target.value)}
-                className="w-full rounded-xl border border-black/15 bg-[#F5F7FA] px-3.5 py-2.5 text-xs font-bold"
-              >
-                <option value="Services">Services (Informatique, Imprimerie, etc.)</option>
-                <option value="Produits">Produits & Fournitures</option>
-                <option value="Réalisations">Portfolio Réalisations</option>
-                <option value="Bannières">Bannières & Hero</option>
-                <option value="Logos">Logos & Icones</option>
-                <option value="Général">Général</option>
-              </select>
-            </div>
-
-            {newUrl && (
-              <div className="p-3 bg-[#F5F7FA] rounded-xl border border-black/10">
-                <p className="text-xs font-bold text-[#111111] mb-2">Aperçu :</p>
-                {newMediaType === 'video' ? (
-                  <video
-                    src={newUrl}
-                    poster={newPosterUrl}
-                    controls
-                    playsInline
-                    className="w-full h-44 object-contain rounded-lg bg-black border border-black/10"
-                  />
-                ) : (
-                  <img
-                    src={newUrl}
-                    alt="Aperçu"
-                    className="w-full h-44 object-cover rounded-lg border border-black/10"
-                  />
-                )}
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-black/10 flex justify-end gap-3">
-              <Button variant="outline" size="sm" onClick={() => setIsAddOpen(false)}>
-                Annuler
-              </Button>
-              <Button variant="primary" size="sm" type="submit">
-                Enregistrer dans la médiathèque
-              </Button>
-            </div>
-          </form>
-        </Modal>
+          onClose={() => setIsPickerOpen(false)}
+          onSelect={(selected) => {
+            setIsPickerOpen(false);
+          }}
+          title="Téléverser un nouveau média"
+        />
       )}
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation Modal */}
       {mediaToDelete && (
         <ConfirmModal
           isOpen={true}
           onClose={() => setMediaToDelete(null)}
-          onConfirm={() => {
-            store.deleteMedia(mediaToDelete.id);
-            setMediaToDelete(null);
-          }}
+          onConfirm={handleDeleteConfirm}
           title="Supprimer ce média ?"
-          message={`Êtes-vous sûr de vouloir supprimer "${mediaToDelete.title}" de la médiathèque ?`}
-          confirmVariant="danger"
+          message={`Êtes-vous sûr de vouloir supprimer définitivement "${mediaToDelete.title}" ?`}
           confirmLabel="Supprimer"
+          variant="danger"
         />
       )}
     </div>

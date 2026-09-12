@@ -6,6 +6,7 @@ import { Input, Textarea, Select } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { MediaPickerModal } from '../../components/admin/MediaPickerModal';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   Edit2,
   Plus,
@@ -13,6 +14,7 @@ import {
   ExternalLink,
   Check,
   Image as ImageIcon,
+  Film,
 } from 'lucide-react';
 import { Service } from '../../types';
 
@@ -82,14 +84,18 @@ export const AdminServicesPage: React.FC = () => {
         {services.map((service) => (
           <Card key={service.id} className="flex flex-col justify-between overflow-hidden">
             <div>
-              <div className="aspect-[16/9] bg-gray-100 relative">
-                <img
-                  src={service.featured_image_url}
-                  alt={service.name}
+              <div className="aspect-[16/9] bg-gray-100 relative overflow-hidden">
+                <MediaDisplay
+                  imageUrl={service.featured_image_url}
+                  imageAlt={service.name}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
+                  aspectRatioClassName="aspect-[16/9]"
+                  autoPlay={false}
+                  loop={false}
+                  muted={true}
+                  showControls={false}
                 />
-                <div className="absolute top-2.5 right-2.5">
+                <div className="absolute top-2.5 right-2.5 z-10">
                   <Badge variant={service.status === 'published' ? 'success' : 'warning'}>
                     {service.status === 'published' ? 'Publié' : 'Brouillon'}
                   </Badge>
@@ -210,26 +216,34 @@ export const AdminServicesPage: React.FC = () => {
               rows={4}
             />
 
-            {/* Featured image with MediaPicker */}
+            {/* Featured image/video with MediaPicker */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
-                Photo illustrative
+                Photo ou Vidéo illustrative du service
               </label>
               <div className="flex items-center gap-4 p-3 rounded-xl border border-black/10 bg-[#F5F7FA]">
                 {editingService.featured_image_url ? (
-                  <img
-                    src={editingService.featured_image_url}
-                    alt=""
-                    className="w-16 h-12 rounded-lg object-cover border border-black/10 shrink-0"
-                  />
+                  <div className="w-20 h-14 rounded-lg overflow-hidden border border-black/10 shrink-0 bg-black">
+                    <MediaDisplay
+                      imageUrl={editingService.featured_image_url}
+                      imageAlt={editingService.name}
+                      className="w-full h-full object-cover"
+                      aspectRatioClassName="aspect-[4/3]"
+                      autoPlay={false}
+                      loop={false}
+                      muted={true}
+                    />
+                  </div>
                 ) : (
-                  <div className="w-16 h-12 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
+                  <div className="w-20 h-14 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
                     <ImageIcon size={18} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono text-[#5F6673] truncate">
-                    {editingService.featured_image_url}
+                    {typeof editingService.featured_image_url === 'string'
+                      ? editingService.featured_image_url
+                      : (editingService.featured_image_url as any)?.url || 'Aucun média'}
                   </p>
                   <Button
                     variant="outline"
@@ -237,7 +251,7 @@ export const AdminServicesPage: React.FC = () => {
                     className="mt-1"
                     onClick={() => setIsMediaPickerOpen(true)}
                   >
-                    Changer l'image
+                    Changer la photo / vidéo
                   </Button>
                 </div>
               </div>
@@ -330,8 +344,9 @@ export const AdminServicesPage: React.FC = () => {
         <MediaPickerModal
           isOpen={true}
           onClose={() => setIsMediaPickerOpen(false)}
-          onSelect={(url) => {
+          onSelect={(selected) => {
             if (editingService) {
+              const url = typeof selected === 'string' ? selected : selected.url;
               setEditingService({ ...editingService, featured_image_url: url });
             }
             setIsMediaPickerOpen(false);

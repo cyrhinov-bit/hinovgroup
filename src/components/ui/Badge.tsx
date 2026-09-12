@@ -3,7 +3,7 @@ import { PublicationStatus, QuoteStatus, PriceDisplayMode } from '../../types';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'blue' | 'green' | 'orange' | 'magenta' | 'gray' | 'red';
+  variant?: 'blue' | 'green' | 'orange' | 'magenta' | 'gray' | 'red' | 'default' | 'success' | 'warning' | 'info';
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -14,13 +14,17 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'sm',
   className = '',
 }) => {
-  const variantStyles = {
+  const variantStyles: Record<string, string> = {
     blue: 'bg-[#EBF4FC] text-[#3573A8] border-[#4A94D1]/20',
     green: 'bg-[#E9FAF0] text-[#32A85F] border-[#4AD07B]/20',
     orange: 'bg-[#FDF5EB] text-[#B26A15] border-[#D38323]/20',
     magenta: 'bg-[#F9ECF6] text-[#872870] border-[#A6378D]/20',
     gray: 'bg-[#F1F4F8] text-[#5F6673] border-gray-200',
     red: 'bg-red-50 text-red-700 border-red-200',
+    default: 'bg-[#F1F4F8] text-[#5F6673] border-gray-200',
+    success: 'bg-[#E9FAF0] text-[#32A85F] border-[#4AD07B]/20',
+    warning: 'bg-[#FDF5EB] text-[#B26A15] border-[#D38323]/20',
+    info: 'bg-[#EBF4FC] text-[#3573A8] border-[#4A94D1]/20',
   };
 
   const sizeStyles = {

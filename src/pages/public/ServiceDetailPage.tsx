@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Button } from '../../components/ui/Button';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import { LIBRAIRIE_CATALOGUE_URL } from '../../lib/constants';
 import { Card } from '../../components/ui/Card';
 import {
@@ -102,12 +103,15 @@ export const ServiceDetailPage: React.FC = () => {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden shadow-xl border border-black/10 aspect-[4/3] relative">
-                <img
-                  src={service.featured_image_url}
-                  alt={service.name}
+              <div className="rounded-2xl overflow-hidden shadow-xl border border-black/10 aspect-[4/3] relative bg-black">
+                <MediaDisplay
+                  imageUrl={service.featured_image_url}
+                  imageAlt={service.name}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
+                  aspectRatioClassName="aspect-[4/3]"
+                  autoPlay={true}
+                  loop={true}
+                  muted={true}
                 />
               </div>
             </div>

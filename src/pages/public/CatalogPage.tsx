@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   Search,
   SlidersHorizontal,
@@ -158,15 +159,19 @@ export const CatalogPage: React.FC = () => {
                   className="flex flex-col justify-between overflow-hidden group"
                 >
                   <div>
-                    {/* Image Area */}
+                    {/* Image or Video Area */}
                     <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                      <img
-                        src={product.primary_image_url}
-                        alt={product.name}
+                      <MediaDisplay
+                        imageUrl={product.primary_image_url}
+                        imageAlt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        referrerPolicy="no-referrer"
+                        aspectRatioClassName="aspect-square"
+                        autoPlay={false}
+                        loop={false}
+                        muted={true}
+                        showControls={false}
                       />
-                      <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-white/95 text-[#111111] text-[11px] font-bold shadow-xs backdrop-blur-xs">
+                      <span className="absolute top-3 left-3 z-10 px-2.5 py-0.5 rounded-full bg-white/95 text-[#111111] text-[11px] font-bold shadow-xs backdrop-blur-xs">
                         {product.category_name}
                       </span>
                       {product.availability === 'in_stock' ? (

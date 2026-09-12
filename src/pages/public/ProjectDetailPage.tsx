@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   ArrowLeft,
   ArrowRight,
@@ -81,14 +82,17 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Gallery */}
+        {/* Gallery / Video */}
         <div className="space-y-4">
-          <div className="aspect-[16/9] bg-white rounded-2xl overflow-hidden border border-black/10 shadow-sm">
-            <img
-              src={activeImg}
-              alt={project.title}
+          <div className="aspect-[16/9] bg-black rounded-2xl overflow-hidden border border-black/10 shadow-sm relative">
+            <MediaDisplay
+              imageUrl={activeImg}
+              imageAlt={project.title}
               className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
+              aspectRatioClassName="aspect-[16/9]"
+              autoPlay={true}
+              loop={true}
+              muted={true}
             />
           </div>
 
@@ -102,7 +106,15 @@ export const ProjectDetailPage: React.FC = () => {
                     activeImg === img ? 'border-[#4A94D1] ring-2 ring-[#4A94D1]/20' : 'border-black/10'
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <MediaDisplay
+                    imageUrl={img}
+                    className="w-full h-full object-cover"
+                    aspectRatioClassName="aspect-[4/3]"
+                    autoPlay={false}
+                    loop={false}
+                    muted={true}
+                    showControls={false}
+                  />
                 </button>
               ))}
             </div>

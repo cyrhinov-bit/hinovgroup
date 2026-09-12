@@ -7,7 +7,8 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { Badge } from '../../components/ui/Badge';
 import { MediaPickerModal } from '../../components/admin/MediaPickerModal';
-import { Plus, Edit2, Trash2, Image as ImageIcon, ExternalLink, Check } from 'lucide-react';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
+import { Plus, Edit2, Trash2, Image as ImageIcon, ExternalLink, Check, Film } from 'lucide-react';
 import { Project } from '../../types';
 
 export const AdminProjectsPage: React.FC = () => {
@@ -82,14 +83,18 @@ export const AdminProjectsPage: React.FC = () => {
         {projects.map((proj) => (
           <Card key={proj.id} className="flex flex-col justify-between overflow-hidden">
             <div>
-              <div className="aspect-[16/10] bg-gray-100 relative">
-                <img
-                  src={proj.featured_image_url}
-                  alt={proj.title}
+              <div className="aspect-[16/10] bg-gray-100 relative overflow-hidden">
+                <MediaDisplay
+                  imageUrl={proj.featured_image_url}
+                  imageAlt={proj.title}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
+                  aspectRatioClassName="aspect-[16/10]"
+                  autoPlay={false}
+                  loop={false}
+                  muted={true}
+                  showControls={false}
                 />
-                <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-black/70 text-white text-[10px] font-bold">
+                <span className="absolute top-3 left-3 z-10 px-2.5 py-0.5 rounded-full bg-black/70 text-white text-[10px] font-bold">
                   {proj.category}
                 </span>
                 <div className="absolute top-3 right-3">
@@ -188,26 +193,34 @@ export const AdminProjectsPage: React.FC = () => {
               rows={4}
             />
 
-            {/* Featured Image */}
+            {/* Featured Image or Video */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
-                Photo principale du projet
+                Photo ou Vidéo principale du projet
               </label>
               <div className="flex items-center gap-4 p-3 rounded-xl border border-black/10 bg-[#F5F7FA]">
                 {editingProject.featured_image_url ? (
-                  <img
-                    src={editingProject.featured_image_url}
-                    alt=""
-                    className="w-14 h-10 rounded-lg object-cover border border-black/10 shrink-0"
-                  />
+                  <div className="w-20 h-14 rounded-lg overflow-hidden border border-black/10 shrink-0 bg-black">
+                    <MediaDisplay
+                      imageUrl={editingProject.featured_image_url}
+                      imageAlt={editingProject.title || ''}
+                      className="w-full h-full object-cover"
+                      aspectRatioClassName="aspect-[16/10]"
+                      autoPlay={false}
+                      loop={false}
+                      muted={true}
+                    />
+                  </div>
                 ) : (
-                  <div className="w-14 h-10 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
+                  <div className="w-20 h-14 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
                     <ImageIcon size={16} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono text-[#5F6673] truncate">
-                    {editingProject.featured_image_url}
+                    {typeof editingProject.featured_image_url === 'string'
+                      ? editingProject.featured_image_url
+                      : (editingProject.featured_image_url as any)?.url || 'Aucun média'}
                   </p>
                   <Button
                     variant="outline"
@@ -215,7 +228,7 @@ export const AdminProjectsPage: React.FC = () => {
                     className="mt-1"
                     onClick={() => setIsMediaPickerOpen(true)}
                   >
-                    Choisir une image
+                    Changer la photo / vidéo
                   </Button>
                 </div>
               </div>
@@ -238,8 +251,9 @@ export const AdminProjectsPage: React.FC = () => {
         <MediaPickerModal
           isOpen={true}
           onClose={() => setIsMediaPickerOpen(false)}
-          onSelect={(url) => {
+          onSelect={(selected) => {
             if (editingProject) {
+              const url = typeof selected === 'string' ? selected : selected.url;
               setEditingProject({ ...editingProject, featured_image_url: url });
             }
             setIsMediaPickerOpen(false);

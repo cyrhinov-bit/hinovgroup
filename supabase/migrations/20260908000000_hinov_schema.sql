@@ -35,9 +35,18 @@ CREATE TABLE IF NOT EXISTS media (
   title TEXT NOT NULL,
   description TEXT,
   category TEXT DEFAULT 'General',
+  folder TEXT DEFAULT 'Général',
+  media_type TEXT DEFAULT 'image',
+  poster_url TEXT,
+  duration INT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   uploaded_by UUID REFERENCES auth.users(id)
 );
+
+ALTER TABLE media ADD COLUMN IF NOT EXISTS folder TEXT DEFAULT 'Général';
+ALTER TABLE media ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image';
+ALTER TABLE media ADD COLUMN IF NOT EXISTS poster_url TEXT;
+ALTER TABLE media ADD COLUMN IF NOT EXISTS duration INT;
 
 -- 4. Pages
 CREATE TABLE IF NOT EXISTS pages (
@@ -267,3 +276,38 @@ CREATE POLICY "Admin full access projects" ON projects FOR ALL TO authenticated 
 CREATE POLICY "Admin full access quotes" ON quotes FOR ALL TO authenticated USING (TRUE);
 CREATE POLICY "Admin full access site_settings" ON site_settings FOR ALL TO authenticated USING (TRUE);
 CREATE POLICY "Admin full access audit_logs" ON audit_logs FOR ALL TO authenticated USING (TRUE);
+
+-- 15. Storage Buckets & Policies for Public Media (Videos & Images)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'media',
+  'media',
+  TRUE,
+  104857600, -- 100MB limit
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime', 'video/ogg']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = TRUE,
+  file_size_limit = 104857600;
+
+-- Storage RLS: Public read access to all media files
+CREATE POLICY "Public Read Media Bucket"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'media');
+
+-- Storage RLS: Authenticated & Admin write access
+CREATE POLICY "Admin Upload Media Bucket"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'media');
+
+CREATE POLICY "Admin Update Media Bucket"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'media');
+
+CREATE POLICY "Admin Delete Media Bucket"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'media');
+

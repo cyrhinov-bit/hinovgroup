@@ -8,6 +8,7 @@ interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | 'full' | string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -17,7 +18,9 @@ export const Modal: React.FC<ModalProps> = ({
   subtitle,
   children,
   maxWidth = 'lg',
+  size,
 }) => {
+  const activeWidth = ((size as any) || maxWidth || 'lg') as 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | 'full';
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -55,7 +58,7 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Dialog */}
       <div
-        className={`relative w-full ${widthStyles[maxWidth]} bg-white rounded-2xl shadow-2xl border border-black/10 z-10 my-8 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200`}
+        className={`relative w-full ${widthStyles[activeWidth] || widthStyles.lg} bg-white rounded-2xl shadow-2xl border border-black/10 z-10 my-8 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200`}
         role="dialog"
         aria-modal="true"
       >

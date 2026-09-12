@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   Monitor,
   Printer,
@@ -75,13 +76,17 @@ export const ServicesIndexPage: React.FC = () => {
               >
                 <div>
                   <div className="aspect-[16/9] bg-gray-100 relative overflow-hidden">
-                    <img
-                      src={service.featured_image_url}
-                      alt={service.name}
+                    <MediaDisplay
+                      imageUrl={service.featured_image_url}
+                      imageAlt={service.name}
                       className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
+                      aspectRatioClassName="aspect-[16/9]"
+                      autoPlay={false}
+                      loop={false}
+                      muted={true}
+                      showControls={false}
                     />
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 z-10">
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md backdrop-blur-md ${
                           accentColorMap[service.accent_color] || 'bg-white text-[#4A94D1]'

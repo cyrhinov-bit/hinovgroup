@@ -6,6 +6,7 @@ import { Input, Textarea, Select } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { MediaPickerModal } from '../../components/admin/MediaPickerModal';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   Eye,
   EyeOff,
@@ -306,14 +307,29 @@ export const AdminPagesPage: React.FC = () => {
                         }
                       />
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setIsMediaPickerOpen(true)}
                           leftIcon={<Film size={14} />}
                         >
-                          Choisir dans la médiathèque
+                          Changer la vidéo
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-[#EBF4FC] text-[#3573A8] border-[#4A94D1]/30 hover:bg-[#EBF4FC]/80"
+                          onClick={() => {
+                            setEditingSection({
+                              ...editingSection,
+                              media_type: 'image',
+                            });
+                            setIsMediaPickerOpen(true);
+                          }}
+                          leftIcon={<ImageIcon size={14} />}
+                        >
+                          Remplacer par une photo statique
                         </Button>
                         {editingSection.video_url && (
                           <Button
@@ -350,15 +366,17 @@ export const AdminPagesPage: React.FC = () => {
                       <p className="text-xs font-bold text-[#111111] mb-1">Aperçu en direct :</p>
                       <div className="aspect-[4/3] rounded-xl overflow-hidden bg-black/90 border border-black/15 relative flex items-center justify-center">
                         {editingSection.video_url ? (
-                          <video
-                            src={editingSection.video_url}
-                            poster={editingSection.video_poster_url}
-                            controls
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
+                          <MediaDisplay
+                            mediaType="video"
+                            videoUrl={editingSection.video_url}
+                            videoPosterUrl={editingSection.video_poster_url}
+                            autoPlay={true}
+                            loop={true}
+                            muted={true}
+                            showControls={true}
+                            interactive={true}
                             className="w-full h-full object-cover"
+                            aspectRatioClassName="aspect-[4/3]"
                           />
                         ) : (
                           <div className="text-center p-3 text-white/50 space-y-1">
@@ -423,7 +441,7 @@ export const AdminPagesPage: React.FC = () => {
                 <div className="flex items-center gap-4 pt-1">
                   {editingSection.image_url ? (
                     <img
-                      src={editingSection.image_url}
+                      src={typeof editingSection.image_url === 'string' ? editingSection.image_url : (editingSection.image_url as any)?.url || ''}
                       alt=""
                       className="w-20 h-20 rounded-xl object-cover border border-black/10 shrink-0 shadow-xs"
                     />
@@ -434,7 +452,7 @@ export const AdminPagesPage: React.FC = () => {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-mono text-[#5F6673] truncate">
-                      {editingSection.image_url || 'Aucune image sélectionnée'}
+                      {(typeof editingSection.image_url === 'string' ? editingSection.image_url : (editingSection.image_url as any)?.url) || 'Aucune image sélectionnée'}
                     </p>
                     <div className="pt-2 flex flex-wrap items-center gap-2">
                       <Button
@@ -443,7 +461,26 @@ export const AdminPagesPage: React.FC = () => {
                         onClick={() => setIsMediaPickerOpen(true)}
                         leftIcon={<ImageIcon size={14} />}
                       >
-                        Sélectionner une image
+                        Changer la photo
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-[#E9FAF0] text-[#1B703C] border-[#4AD07B]/30 hover:bg-[#E9FAF0]/80"
+                        onClick={() => {
+                          setEditingSection({
+                            ...editingSection,
+                            media_type: 'video',
+                            video_autoplay: true,
+                            video_loop: true,
+                            video_muted: true,
+                            video_controls: true,
+                          });
+                          setIsMediaPickerOpen(true);
+                        }}
+                        leftIcon={<Film size={14} />}
+                      >
+                        Remplacer par une vidéo
                       </Button>
                       {editingSection.image_url && (
                         <Button
@@ -555,13 +592,17 @@ export const AdminPagesPage: React.FC = () => {
           onClose={() => setIsMediaPickerOpen(false)}
           onSelect={(selected) => {
             if (editingSection) {
-              if (
+              const isVid =
                 selected.mediaType === 'video' ||
-                selected.url.endsWith('.mp4') ||
-                selected.url.endsWith('.webm') ||
+                selected.url.includes('.mp4') ||
+                selected.url.includes('.webm') ||
+                selected.url.includes('.mov') ||
+                selected.url.includes('.ogg') ||
                 selected.url.includes('youtube.com') ||
-                selected.url.includes('youtu.be')
-              ) {
+                selected.url.includes('youtu.be') ||
+                selected.url.includes('vimeo.com');
+
+              if (isVid) {
                 setEditingSection({
                   ...editingSection,
                   media_type: 'video',

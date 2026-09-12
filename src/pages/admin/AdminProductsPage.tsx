@@ -7,6 +7,7 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { Badge } from '../../components/ui/Badge';
 import { MediaPickerModal } from '../../components/admin/MediaPickerModal';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   Plus,
   Search,
@@ -16,6 +17,7 @@ import {
   Star,
   ExternalLink,
   Check,
+  Film,
 } from 'lucide-react';
 import { Product } from '../../types';
 
@@ -182,12 +184,18 @@ export const AdminProductsPage: React.FC = () => {
                 <tr key={p.id} className="hover:bg-black/2 transition-colors">
                   <td className="py-3.5 px-5">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={p.primary_image_url}
-                        alt=""
-                        className="w-10 h-10 rounded-lg object-cover border border-black/10 shrink-0"
-                        referrerPolicy="no-referrer"
-                      />
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-black/10 shrink-0 bg-black/5">
+                        <MediaDisplay
+                          imageUrl={p.primary_image_url}
+                          imageAlt={p.name}
+                          className="w-full h-full object-cover"
+                          aspectRatioClassName="aspect-square"
+                          autoPlay={false}
+                          loop={false}
+                          muted={true}
+                          showControls={false}
+                        />
+                      </div>
                       <div className="min-w-0">
                         <div className="font-bold text-[#111111] truncate max-w-xs">{p.name}</div>
                         {p.is_featured && (
@@ -359,26 +367,34 @@ export const AdminProductsPage: React.FC = () => {
               rows={2}
             />
 
-            {/* Image via MediaPicker */}
+            {/* Image or Video via MediaPicker */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
-                Photo principale
+                Photo ou Vidéo principale du produit
               </label>
               <div className="flex items-center gap-4 p-3 rounded-xl border border-black/10 bg-[#F5F7FA]">
                 {editingProduct.primary_image_url ? (
-                  <img
-                    src={editingProduct.primary_image_url}
-                    alt=""
-                    className="w-14 h-14 rounded-lg object-cover border border-black/10 shrink-0"
-                  />
+                  <div className="w-16 h-16 rounded-lg overflow-hidden border border-black/10 shrink-0 bg-black">
+                    <MediaDisplay
+                      imageUrl={editingProduct.primary_image_url}
+                      imageAlt={editingProduct.name || ''}
+                      className="w-full h-full object-cover"
+                      aspectRatioClassName="aspect-square"
+                      autoPlay={false}
+                      loop={false}
+                      muted={true}
+                    />
+                  </div>
                 ) : (
-                  <div className="w-14 h-14 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
+                  <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
                     <ImageIcon size={18} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono text-[#5F6673] truncate">
-                    {editingProduct.primary_image_url}
+                    {typeof editingProduct.primary_image_url === 'string'
+                      ? editingProduct.primary_image_url
+                      : (editingProduct.primary_image_url as any)?.url || 'Aucun média'}
                   </p>
                   <Button
                     variant="outline"
@@ -386,7 +402,7 @@ export const AdminProductsPage: React.FC = () => {
                     className="mt-1"
                     onClick={() => setIsMediaPickerOpen(true)}
                   >
-                    Choisir une image
+                    Changer la photo / vidéo
                   </Button>
                 </div>
               </div>
@@ -450,8 +466,9 @@ export const AdminProductsPage: React.FC = () => {
         <MediaPickerModal
           isOpen={true}
           onClose={() => setIsMediaPickerOpen(false)}
-          onSelect={(url) => {
+          onSelect={(selected) => {
             if (editingProduct) {
+              const url = typeof selected === 'string' ? selected : selected.url;
               setEditingProduct({ ...editingProduct, primary_image_url: url });
             }
             setIsMediaPickerOpen(false);

@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useStore } from '../../hooks/useStore';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { useStore } from '../../hooks/useStore';
-import { MediaItem } from '../../types';
+import { MediaDisplay } from '../ui/MediaDisplay';
+import { MediaItem, MediaType } from '../../types';
+import { uploadMediaFile } from '../../lib/mediaStorage';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import {
-  Search,
-  Upload,
-  Check,
   Image as ImageIcon,
+  Upload,
+  Link as LinkIcon,
+  Search,
+  Check,
   Film,
   Play,
-  Filter,
+  Cloud,
+  HardDrive,
+  Loader2,
+  AlertCircle,
+  Video,
+  FileText,
 } from 'lucide-react';
 
 interface MediaPickerModalProps {
@@ -21,7 +30,7 @@ interface MediaPickerModalProps {
     url: string;
     alt?: string;
     id?: string;
-    mediaType?: 'image' | 'video';
+    mediaType?: MediaType;
     posterUrl?: string;
   }) => void;
   currentUrl?: string;
@@ -34,7 +43,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   onClose,
   onSelect,
   currentUrl,
-  title = 'Choisir un média (Image ou Courte Vidéo)',
+  title = 'Choisir un média (Image ou Vidéo)',
   filterType = 'all',
 }) => {
   const { media, store } = useStore();
@@ -43,26 +52,51 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
-  // Upload form states
+  // Upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string>('');
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadAlt, setUploadAlt] = useState('');
   const [uploadCategory, setUploadCategory] = useState('Général');
-  const [uploadMediaType, setUploadMediaType] = useState<'image' | 'video'>('image');
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [fileMeta, setFileMeta] = useState<{ name: string; size: number; type: string } | null>(null);
+  const [uploadMediaType, setUploadMediaType] = useState<MediaType>('image');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadStatusText, setUploadStatusText] = useState<string>('');
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string>('');
 
   // Direct URL state
   const [customUrl, setCustomUrl] = useState('');
   const [customAlt, setCustomAlt] = useState('');
-  const [customMediaType, setCustomMediaType] = useState<'image' | 'video'>('image');
+  const [customMediaType, setCustomMediaType] = useState<MediaType>('image');
   const [customPosterUrl, setCustomPosterUrl] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (filterType !== 'all') {
+      setTypeFilter(filterType);
+    }
+  }, [filterType]);
+
+  // Clean up object URL on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrl && filePreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(filePreviewUrl);
+      }
+    };
+  }, [filePreviewUrl]);
 
   const filteredMedia = media.filter((item) => {
     const isVid =
       item.media_type === 'video' ||
       item.mime_type?.startsWith('video/') ||
-      item.url.endsWith('.mp4') ||
-      item.url.endsWith('.webm');
+      item.url.includes('.mp4') ||
+      item.url.includes('.webm') ||
+      item.url.includes('.mov') ||
+      item.url.includes('youtube.com') ||
+      item.url.includes('youtu.be') ||
+      item.url.includes('vimeo.com');
 
     if (typeFilter === 'image' && isVid) return false;
     if (typeFilter === 'video' && !isVid) return false;
@@ -75,83 +109,119 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     return !term || titleMatch || altMatch || catMatch;
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = (file: File) => {
+    setUploadError('');
+    setSelectedFile(file);
 
-    // Check size limit: 15MB for video, 5MB for image
-    const isVideoFile = file.type.startsWith('video/');
-    const maxSizeBytes = isVideoFile ? 15 * 1024 * 1024 : 5 * 1024 * 1024;
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg|m4v)$/i.test(file.name);
+    setUploadMediaType(isVideo ? 'video' : 'image');
 
-    if (file.size > maxSizeBytes) {
-      alert(`Le fichier dépasse la limite maximale recommandée de ${isVideoFile ? '15' : '5'} Mo.`);
-      return;
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    setUploadTitle(cleanTitle);
+    setUploadAlt(`${isVideo ? 'Vidéo' : 'Image'} HINOV Group - ${cleanTitle}`);
+
+    // Create temporary local preview
+    if (filePreviewUrl && filePreviewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(filePreviewUrl);
     }
-
-    setUploadMediaType(isVideoFile ? 'video' : 'image');
-    setFileMeta({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
-    setUploadTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-    setUploadAlt(`${isVideoFile ? 'Vidéo' : 'Image'} HINOV Group - ${file.name}`);
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (ev.target?.result) {
-        setPreviewUrl(ev.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    const tempUrl = URL.createObjectURL(file);
+    setFilePreviewUrl(tempUrl);
   };
 
-  const handleSaveUpload = () => {
-    if (!previewUrl) return;
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
 
-    const isVid = uploadMediaType === 'video' || fileMeta?.type.startsWith('video/');
-    const newMedia = store.addMedia({
-      filename: fileMeta?.name || (isVid ? 'video.mp4' : 'image.jpg'),
-      file_name: fileMeta?.name || (isVid ? 'video.mp4' : 'image.jpg'),
-      url: previewUrl,
-      media_type: isVid ? 'video' : 'image',
-      mime_type: fileMeta?.type || (isVid ? 'video/mp4' : 'image/jpeg'),
-      file_size: fileMeta?.size || (isVid ? 2500000 : 150000),
-      title: uploadTitle.trim() || (isVid ? 'Nouvelle vidéo' : 'Nouvelle image'),
-      alt_text: uploadAlt.trim() || 'Média HINOV Group',
-      category: uploadCategory,
-    });
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
 
-    onSelect({
-      url: newMedia.url,
-      alt: newMedia.alt_text,
-      id: newMedia.id,
-      mediaType: newMedia.media_type,
-    });
-    onClose();
+  const handleSaveUpload = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    setUploadProgress(10);
+    setUploadStatusText('Préparation du fichier...');
+    setUploadError('');
+
+    try {
+      const uploadResult = await uploadMediaFile(selectedFile, {
+        category: uploadCategory,
+        folder: uploadMediaType === 'video' ? 'Vidéos' : 'Général',
+        onProgress: (pct, msg) => {
+          setUploadProgress(pct);
+          setUploadStatusText(msg);
+        },
+      });
+
+      const newMedia = store.addMedia({
+        title: uploadTitle.trim() || (uploadResult.mediaType === 'video' ? 'Nouvelle vidéo' : 'Nouvelle image'),
+        filename: uploadResult.fileName,
+        file_name: uploadResult.fileName,
+        url: uploadResult.url,
+        media_type: uploadResult.mediaType,
+        mime_type: uploadResult.mimeType,
+        file_size: uploadResult.fileSize,
+        duration: uploadResult.duration,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        poster_url: uploadResult.posterUrl,
+        alt_text: uploadAlt.trim() || 'Média HINOV Group',
+        category: uploadCategory,
+        folder: uploadMediaType === 'video' ? 'Vidéos' : 'Général',
+      });
+
+      onSelect({
+        url: newMedia.url,
+        alt: newMedia.alt_text,
+        id: newMedia.id,
+        mediaType: newMedia.media_type,
+        posterUrl: newMedia.poster_url,
+      });
+
+      onClose();
+    } catch (err: any) {
+      console.error('Erreur téléversement média:', err);
+      setUploadError(err.message || 'Une erreur est survenue lors du téléversement.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleApplyCustomUrl = () => {
     if (!customUrl.trim()) return;
+
     const isVid =
       customMediaType === 'video' ||
-      customUrl.endsWith('.mp4') ||
-      customUrl.endsWith('.webm') ||
+      customUrl.includes('.mp4') ||
+      customUrl.includes('.webm') ||
+      customUrl.includes('.mov') ||
       customUrl.includes('youtube.com') ||
       customUrl.includes('youtu.be') ||
       customUrl.includes('vimeo.com');
 
+    const fname = customUrl.split('/').pop()?.split('?')[0] || (isVid ? 'video.mp4' : 'image.jpg');
+
     const newMedia = store.addMedia({
-      filename: customUrl.split('/').pop()?.split('?')[0] || (isVid ? 'video.mp4' : 'image.jpg'),
-      file_name: customUrl.split('/').pop()?.split('?')[0] || (isVid ? 'video.mp4' : 'image.jpg'),
+      filename: fname,
+      file_name: fname,
       url: customUrl.trim(),
       media_type: isVid ? 'video' : 'image',
       mime_type: isVid ? 'video/mp4' : 'image/jpeg',
       file_size: isVid ? 2000000 : 100000,
-      title: customAlt.trim() || (isVid ? 'Vidéo URL' : 'Image URL'),
+      title: customAlt.trim() || (isVid ? 'Vidéo distante' : 'Image URL'),
       alt_text: customAlt.trim() || 'Média HINOV Group',
       poster_url: customPosterUrl.trim() || undefined,
       category: 'Externe',
+      folder: isVid ? 'Vidéos' : 'Général',
     });
 
     onSelect({
@@ -161,6 +231,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       mediaType: isVid ? 'video' : 'image',
       posterUrl: newMedia.poster_url,
     });
+
     onClose();
   };
 
@@ -181,23 +252,25 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('upload')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'upload'
                 ? 'bg-[#4A94D1] text-white shadow-xs'
                 : 'text-[#5F6673] hover:bg-black/5'
             }`}
           >
-            Téléverser (Image ou Vidéo)
+            <Upload size={13} />
+            <span>Téléverser depuis l'ordinateur</span>
           </button>
           <button
             onClick={() => setActiveTab('url')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'url'
                 ? 'bg-[#4A94D1] text-white shadow-xs'
                 : 'text-[#5F6673] hover:bg-black/5'
             }`}
           >
-            Lien URL Web / Vidéo MP4
+            <LinkIcon size={13} />
+            <span>Lien Web / Vidéo externe</span>
           </button>
         </div>
 
@@ -207,7 +280,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex-1">
                 <Input
-                  placeholder="Rechercher par titre, catégorie ou texte..."
+                  placeholder="Rechercher par titre, catégorie ou nom de fichier..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   leftIcon={<Search size={16} />}
@@ -249,20 +322,24 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                   }`}
                 >
                   <Film size={13} />
-                  <span>Vidéos courtes</span>
+                  <span>Vidéos</span>
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[380px] overflow-y-auto p-1">
+            {/* Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1">
               {filteredMedia.map((item) => {
                 const isSelected = selectedMedia?.id === item.id || currentUrl === item.url;
-                const usageCount = item.used_in?.length || 0;
                 const isVid =
                   item.media_type === 'video' ||
                   item.mime_type?.startsWith('video/') ||
-                  item.url.endsWith('.mp4') ||
-                  item.url.endsWith('.webm');
+                  item.url.includes('.mp4') ||
+                  item.url.includes('.webm') ||
+                  item.url.includes('.mov') ||
+                  item.url.includes('youtube.com') ||
+                  item.url.includes('youtu.be') ||
+                  item.url.includes('vimeo.com');
 
                 return (
                   <div
@@ -274,17 +351,22 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                         : 'border-black/10 hover:border-black/25'
                     }`}
                   >
-                    <div className="aspect-video bg-gray-900 relative overflow-hidden flex items-center justify-center">
+                    <div className="aspect-video bg-gray-950 relative overflow-hidden flex items-center justify-center">
                       {isVid ? (
                         <>
-                          <video
-                            src={item.url}
-                            poster={item.poster_url}
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80"
+                          <MediaDisplay
+                            mediaType="video"
+                            videoUrl={item.url}
+                            videoPosterUrl={item.poster_url}
+                            autoPlay={false}
+                            loop={false}
+                            muted={true}
+                            showControls={false}
+                            interactive={false}
+                            className="w-full h-full object-cover"
+                            aspectRatioClassName="aspect-video"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
                             <div className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-xs text-white flex items-center justify-center group-hover:scale-110 transition-transform">
                               <Play size={14} className="fill-white translate-x-0.5" />
                             </div>
@@ -300,32 +382,35 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                           alt={item.alt_text}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
                         />
                       )}
 
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-[#4A94D1] text-white flex items-center justify-center shadow-md">
-                          <Check size={14} />
+                          <Check size={14} strokeWidth={3} />
                         </div>
-                      )}
-
-                      {usageCount > 0 && (
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-medium backdrop-blur-xs">
-                          {usageCount} util.
-                        </span>
                       )}
                     </div>
 
                     <div className="p-2 bg-white">
-                      <p className="text-xs font-semibold text-[#111111] truncate">{item.title}</p>
-                      <p className="text-[11px] text-[#5F6673] truncate">{item.category || 'Général'}</p>
+                      <p className="text-xs font-bold text-[#111111] truncate">{item.title}</p>
+                      <p className="text-[10px] text-[#5F6673] truncate font-mono">
+                        {item.file_name || item.filename}
+                      </p>
                     </div>
                   </div>
                 );
               })}
+
+              {filteredMedia.length === 0 && (
+                <div className="col-span-full py-12 text-center text-[#5F6673]">
+                  <Film size={32} className="mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-semibold">Aucun média trouvé</p>
+                  <p className="text-xs text-[#5F6673]/80 mt-1">
+                    Téléversez un fichier depuis votre ordinateur ou ajoutez un lien.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Selection details */}
@@ -333,7 +418,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
               <div className="p-3 bg-[#EBF4FC] rounded-xl border border-[#4A94D1]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-lg bg-black/10 overflow-hidden shrink-0 border border-[#4A94D1]/30 flex items-center justify-center">
-                    {selectedMedia.media_type === 'video' || selectedMedia.url.endsWith('.mp4') ? (
+                    {selectedMedia.media_type === 'video' || selectedMedia.url.includes('.mp4') ? (
                       <Film size={20} className="text-[#4A94D1]" />
                     ) : (
                       <img
@@ -366,8 +451,14 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                   onClick={() => {
                     const isVid =
                       selectedMedia.media_type === 'video' ||
-                      selectedMedia.url.endsWith('.mp4') ||
-                      selectedMedia.url.endsWith('.webm');
+                      selectedMedia.mime_type?.startsWith('video/') ||
+                      selectedMedia.url.includes('.mp4') ||
+                      selectedMedia.url.includes('.webm') ||
+                      selectedMedia.url.includes('.mov') ||
+                      selectedMedia.url.includes('youtube.com') ||
+                      selectedMedia.url.includes('youtu.be') ||
+                      selectedMedia.url.includes('vimeo.com');
+
                     onSelect({
                       url: selectedMedia.url,
                       alt: selectedMedia.alt_text,
@@ -378,190 +469,267 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                     onClose();
                   }}
                 >
-                  Valider la sélection
+                  Insérer ce média
                 </Button>
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 2: Upload */}
+        {/* Tab 2: Upload from Computer */}
         {activeTab === 'upload' && (
           <div className="space-y-4">
-            {!previewUrl ? (
-              <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-[#4A94D1]/40 rounded-2xl bg-[#EBF4FC]/40 hover:bg-[#EBF4FC]/60 transition-colors cursor-pointer">
-                <div className="w-14 h-14 rounded-2xl bg-white text-[#4A94D1] shadow-xs flex items-center justify-center mb-3">
-                  <Upload size={28} />
+            {/* Cloud storage badge */}
+            <div
+              className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                isSupabaseConfigured
+                  ? 'bg-[#E9FAF0] border-[#4AD07B]/30 text-[#1B703C]'
+                  : 'bg-[#FDF5EB] border-[#D38323]/30 text-[#B26A15]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {isSupabaseConfigured ? (
+                  <Cloud size={16} className="text-[#32A85F] shrink-0" />
+                ) : (
+                  <HardDrive size={16} className="text-[#D38323] shrink-0" />
+                )}
+                <div>
+                  <span className="font-bold">
+                    {isSupabaseConfigured
+                      ? 'Stockage Cloud Supabase Actif (CDN Public)'
+                      : 'Stockage Local IndexedDB'}
+                  </span>
+                  <p className="text-[11px] opacity-90">
+                    {isSupabaseConfigured
+                      ? 'Les vidéos téléversées sont hébergées sur le CDN mondial et visibles par tous les visiteurs dès publication.'
+                      : 'Les médias sont stockés dans la base de votre navigateur. Connectez Supabase pour une diffusion cloud mondiale.'}
+                  </p>
                 </div>
-                <p className="text-sm font-bold text-[#111111]">
-                  Cliquez pour sélectionner une image ou une courte vidéo
-                </p>
-                <p className="text-xs text-[#5F6673] mt-1">
-                  Formats acceptés : JPG, PNG, WEBP, SVG, MP4, WebM (Vidéos max 15 Mo, Images max 5 Mo)
-                </p>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/svg+xml,video/mp4,video/webm,video/ogg"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-[#111111]">Aperçu du fichier :</p>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#4A94D1]/15 text-[#3573A8]">
-                      {uploadMediaType === 'video' ? 'Vidéo courte' : 'Image statique'}
+              </div>
+            </div>
+
+            {/* Drag and drop box */}
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-black/20 hover:border-[#4A94D1] rounded-2xl p-6 text-center cursor-pointer bg-[#F5F7FA] hover:bg-[#EBF4FC]/40 transition-colors"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="video/mp4,video/webm,video/quicktime,video/ogg,video/m4v,image/jpeg,image/png,image/webp,image/svg+xml,image/gif"
+                onChange={handleFileInputChange}
+              />
+              <div className="w-12 h-12 mx-auto rounded-full bg-[#4A94D1]/10 text-[#4A94D1] flex items-center justify-center mb-3">
+                {uploadMediaType === 'video' ? <Video size={24} /> : <Upload size={24} />}
+              </div>
+              <p className="text-sm font-bold text-[#111111]">
+                Glissez-déposez votre vidéo ou image ici, ou{' '}
+                <span className="text-[#4A94D1] underline">parcourez votre ordinateur</span>
+              </p>
+              <p className="text-xs text-[#5F6673] mt-1">
+                Formats acceptés : <strong>MP4, WebM, MOV, OGG</strong> (vidéos jusqu'à 100 Mo) &bull;{' '}
+                <strong>JPG, PNG, WebP, SVG</strong> (images)
+              </p>
+            </div>
+
+            {/* Selected File Details & Preview */}
+            {selectedFile && (
+              <div className="p-4 bg-white rounded-xl border border-black/10 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4 items-start">
+                  <div className="w-full md:w-56 shrink-0 aspect-video rounded-xl overflow-hidden bg-black/90 relative flex items-center justify-center border border-black/10">
+                    {uploadMediaType === 'video' ? (
+                      <video
+                        src={filePreviewUrl}
+                        controls
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={filePreviewUrl}
+                        alt="Aperçu"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-bold">
+                      {uploadMediaType === 'video' ? 'Vidéo locale' : 'Image locale'}
                     </span>
                   </div>
 
-                  <div className="aspect-video rounded-xl overflow-hidden border border-black/15 bg-black/90 relative flex items-center justify-center">
-                    {uploadMediaType === 'video' ? (
-                      <video
-                        src={previewUrl}
-                        controls
-                        playsInline
-                        className="w-full h-full object-contain"
+                  <div className="flex-1 space-y-3 w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Input
+                        label="Titre du média"
+                        value={uploadTitle}
+                        onChange={(e) => setUploadTitle(e.target.value)}
+                        placeholder="Ex: Vidéo présentation HINOV"
                       />
-                    ) : (
-                      <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
-                    )}
+                      <Input
+                        label="Texte alternatif (SEO & Accessibilité)"
+                        value={uploadAlt}
+                        onChange={(e) => setUploadAlt(e.target.value)}
+                        placeholder="Ex: Équipe HINOV en action"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-[#5F6673] pt-2 border-t border-black/5">
+                      <span>Fichier : <strong>{selectedFile.name}</strong></span>
+                      <span>Taille : <strong>{(selectedFile.size / (1024 * 1024)).toFixed(2)} Mo</strong></span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setPreviewUrl('')}
-                    className="text-xs text-red-600 hover:underline font-semibold cursor-pointer"
-                  >
-                    Changer de fichier
-                  </button>
                 </div>
 
-                <div className="space-y-3">
-                  <Input
-                    label="Titre du média"
-                    value={uploadTitle}
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="Texte alternatif ou descriptif"
-                    value={uploadAlt}
-                    onChange={(e) => setUploadAlt(e.target.value)}
-                    placeholder="Ex: Démonstration câblage réseau ou impression"
-                    required
-                  />
-                  <Input
-                    label="Catégorie"
-                    value={uploadCategory}
-                    onChange={(e) => setUploadCategory(e.target.value)}
-                  />
-
-                  <div className="pt-2">
-                    <Button variant="primary" size="md" className="w-full" onClick={handleSaveUpload}>
-                      Téléverser et sélectionner
-                    </Button>
+                {/* Progress bar */}
+                {isUploading && (
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#111111]">
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 size={13} className="animate-spin text-[#4A94D1]" />
+                        {uploadStatusText}
+                      </span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#4A94D1] transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
                   </div>
+                )}
+
+                {uploadError && (
+                  <div className="p-3 rounded-lg bg-red-50 text-red-700 text-xs flex items-center gap-2">
+                    <AlertCircle size={15} className="shrink-0" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setFilePreviewUrl('');
+                    }}
+                    disabled={isUploading}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveUpload}
+                    disabled={isUploading}
+                    leftIcon={isUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  >
+                    {isUploading ? 'Téléversement en cours...' : 'Enregistrer & Publier'}
+                  </Button>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 3: URL */}
+        {/* Tab 3: Custom URL / YouTube / Vimeo */}
         {activeTab === 'url' && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-bold text-[#111111]">Type de contenu :</label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCustomMediaType('image')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
-                    customMediaType === 'image'
-                      ? 'bg-[#4A94D1] text-white border-[#4A94D1]'
-                      : 'bg-white text-[#5F6673] border-black/10'
-                  }`}
-                >
-                  Image
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomMediaType('video')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
-                    customMediaType === 'video'
-                      ? 'bg-[#4AD07B] text-white border-[#4AD07B]'
-                      : 'bg-white text-[#5F6673] border-black/10'
-                  }`}
-                >
-                  Courte Vidéo (MP4 / WebM / YouTube)
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setCustomMediaType('video')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  customMediaType === 'video'
+                    ? 'bg-[#4AD07B] text-white shadow-xs'
+                    : 'bg-[#F5F7FA] text-[#5F6673] hover:text-[#111111]'
+                }`}
+              >
+                <Film size={13} />
+                <span>Lien Vidéo (YouTube, Vimeo ou MP4 direct)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomMediaType('image')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  customMediaType === 'image'
+                    ? 'bg-[#4A94D1] text-white shadow-xs'
+                    : 'bg-[#F5F7FA] text-[#5F6673] hover:text-[#111111]'
+                }`}
+              >
+                <ImageIcon size={13} />
+                <span>Image Web (URL directe)</span>
+              </button>
             </div>
 
             <Input
-              label={customMediaType === 'video' ? 'Lien URL de la vidéo (MP4 direct ou YouTube)' : "URL directe de l'image"}
+              label={
+                customMediaType === 'video'
+                  ? 'Lien de la vidéo (YouTube, YouTube Shorts, Vimeo ou URL MP4)'
+                  : "URL directe de l'image"
+              }
               placeholder={
                 customMediaType === 'video'
-                  ? 'https://exemple.com/video-demonstration.mp4'
+                  ? 'https://www.youtube.com/watch?v=... ou https://exemple.com/video.mp4'
                   : 'https://images.unsplash.com/...'
               }
               value={customUrl}
-              onChange={(e) => {
-                const url = e.target.value;
-                setCustomUrl(url);
-                if (url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('youtube.com') || url.includes('youtu.be')) {
-                  setCustomMediaType('video');
-                }
-              }}
-              required
-            />
-
-            <Input
-              label="Titre ou texte alternatif"
-              placeholder="Ex: Séquence atelier d'impression HINOV"
-              value={customAlt}
-              onChange={(e) => setCustomAlt(e.target.value)}
+              onChange={(e) => setCustomUrl(e.target.value)}
+              leftIcon={<LinkIcon size={16} />}
             />
 
             {customMediaType === 'video' && (
               <Input
-                label="Image de couverture de la vidéo (Poster URL - optionnel)"
-                placeholder="https://.../poster.jpg"
+                label="Image de couverture (Poster avant lecture - Optionnel)"
+                placeholder="https://images.unsplash.com/... ou https://exemple.com/poster.jpg"
                 value={customPosterUrl}
                 onChange={(e) => setCustomPosterUrl(e.target.value)}
               />
             )}
 
+            <Input
+              label="Titre / Description SEO"
+              placeholder="Ex: Démonstration des services HINOV"
+              value={customAlt}
+              onChange={(e) => setCustomAlt(e.target.value)}
+            />
+
+            {/* Live Preview */}
             {customUrl && (
-              <div className="aspect-video max-h-52 rounded-xl overflow-hidden border bg-black/90 flex items-center justify-center">
-                {customMediaType === 'video' ? (
-                  <video
-                    src={customUrl}
-                    controls
-                    playsInline
-                    className="w-full h-full object-contain"
+              <div className="p-3 bg-[#F5F7FA] rounded-xl border border-black/10 space-y-2">
+                <p className="text-xs font-bold text-[#111111]">Aperçu du média :</p>
+                <div className="max-w-md aspect-video rounded-xl overflow-hidden bg-black relative flex items-center justify-center border">
+                  <MediaDisplay
+                    mediaType={customMediaType}
+                    videoUrl={customMediaType === 'video' ? customUrl : undefined}
+                    imageUrl={customMediaType === 'image' ? customUrl : undefined}
+                    videoPosterUrl={customPosterUrl}
+                    autoPlay={false}
+                    loop={false}
+                    muted={true}
+                    showControls={true}
+                    interactive={true}
+                    aspectRatioClassName="aspect-video"
                   />
-                ) : (
-                  <img
-                    src={customUrl}
-                    alt="Aperçu URL"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                )}
+                </div>
               </div>
             )}
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-black/5">
+              <Button variant="outline" size="sm" onClick={onClose}>
+                Annuler
+              </Button>
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
                 onClick={handleApplyCustomUrl}
                 disabled={!customUrl.trim()}
               >
-                Enregistrer et utiliser ce média
+                Insérer ce lien
               </Button>
             </div>
           </div>

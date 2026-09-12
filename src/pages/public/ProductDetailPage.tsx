@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import {
   ArrowLeft,
   ArrowRight,
@@ -66,13 +67,16 @@ export const ProductDetailPage: React.FC = () => {
           {/* Gallery Column */}
           <div className="lg:col-span-6 space-y-4">
             <div className="aspect-square bg-white rounded-2xl overflow-hidden border border-black/10 shadow-sm relative">
-              <img
-                src={activeImg}
-                alt={product.name}
+              <MediaDisplay
+                imageUrl={activeImg}
+                imageAlt={product.name}
                 className="w-full h-full object-contain p-4"
-                referrerPolicy="no-referrer"
+                aspectRatioClassName="aspect-square"
+                autoPlay={true}
+                loop={true}
+                muted={true}
               />
-              <span className="absolute top-4 left-4 px-3 py-1 rounded-full bg-white/95 text-[#111111] text-xs font-bold shadow-xs backdrop-blur-xs">
+              <span className="absolute top-4 left-4 z-10 px-3 py-1 rounded-full bg-white/95 text-[#111111] text-xs font-bold shadow-xs backdrop-blur-xs">
                 {product.category_name}
               </span>
             </div>
@@ -90,7 +94,15 @@ export const ProductDetailPage: React.FC = () => {
                         : 'border-black/10 hover:border-black/25'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <MediaDisplay
+                      imageUrl={img}
+                      className="w-full h-full object-contain p-1"
+                      aspectRatioClassName="aspect-square"
+                      autoPlay={false}
+                      loop={false}
+                      muted={true}
+                      showControls={false}
+                    />
                   </button>
                 ))}
               </div>

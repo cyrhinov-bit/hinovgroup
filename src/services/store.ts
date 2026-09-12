@@ -28,8 +28,16 @@ import {
 } from '../lib/initialData';
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { deleteLocalBlob, restoreMediaItemUrl } from '../lib/mediaStorage';
 
 const STORAGE_KEY = 'hinov_group_cms_v1';
+
+export function ensureStringUrl(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && val.url && typeof val.url === 'string') return val.url;
+  return '';
+}
 
 export interface AppState {
   settings: SiteSettings;
@@ -54,8 +62,29 @@ class StoreService {
 
   constructor() {
     this.state = this.loadInitialState();
+    this.restoreOfflineBlobs();
     if (isSupabaseConfigured && supabase) {
       this.initSupabase();
+    }
+  }
+
+  private async restoreOfflineBlobs() {
+    let updated = false;
+    for (const item of this.state.media) {
+      if (item.storage_path && (!item.url || item.url.startsWith('blob:'))) {
+        try {
+          const freshUrl = await restoreMediaItemUrl(item.id, item.storage_path);
+          if (freshUrl && freshUrl !== item.url) {
+            item.url = freshUrl;
+            updated = true;
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    if (updated) {
+      this.notify();
     }
   }
 
@@ -75,7 +104,11 @@ class StoreService {
         const parsed = JSON.parse(stored);
 
         // Merge initial media to ensure newly added video samples are available in existing sessions
-        const storedMedia: MediaItem[] = parsed.media || [];
+        const storedMedia: MediaItem[] = (parsed.media || []).map((m: any) => ({
+          ...m,
+          url: ensureStringUrl(m.url),
+          poster_url: ensureStringUrl(m.poster_url),
+        }));
         const existingIds = new Set(storedMedia.map((m) => m.id));
         const mergedMedia = [...storedMedia];
         INITIAL_MEDIA.forEach((initM) => {
@@ -84,7 +117,16 @@ class StoreService {
           }
         });
 
-        const storedPages = parsed.pages || INITIAL_PAGES;
+        const storedPages = (parsed.pages || INITIAL_PAGES).map((p: any) => ({
+          ...p,
+          sections: (p.sections || []).map((sec: any) => ({
+            ...sec,
+            image_url: ensureStringUrl(sec.image_url),
+            video_url: ensureStringUrl(sec.video_url),
+            video_poster_url: ensureStringUrl(sec.video_poster_url),
+          })),
+        }));
+
         const homePage = storedPages.find((p: any) => p.id === 'page-home');
         if (homePage && !homePage.sections.some((s: any) => s.id === 'sec-video-spotlight')) {
           const initHome = INITIAL_PAGES.find((p) => p.id === 'page-home');
@@ -98,24 +140,39 @@ class StoreService {
           ? {
               ...INITIAL_SETTINGS,
               ...parsed.settings,
-              logo_url: parsed.settings.logo_url || '/assets/icon-512.png',
-              favicon_url: parsed.settings.favicon_url || '/assets/icon-512.png',
+              logo_url: ensureStringUrl(parsed.settings.logo_url) || '/assets/icon-512.png',
+              favicon_url: ensureStringUrl(parsed.settings.favicon_url) || '/assets/icon-512.png',
             }
           : INITIAL_SETTINGS;
+
+        const storedServices = (parsed.services || INITIAL_SERVICES).map((s: any) => ({
+          ...s,
+          featured_image_url: ensureStringUrl(s.featured_image_url),
+        }));
+
+        const storedProducts = (parsed.products || INITIAL_PRODUCTS).map((p: any) => ({
+          ...p,
+          primary_image_url: ensureStringUrl(p.primary_image_url),
+        }));
+
+        const storedProjects = (parsed.projects || INITIAL_PROJECTS).map((pr: any) => ({
+          ...pr,
+          featured_image_url: ensureStringUrl(pr.featured_image_url),
+        }));
 
         return {
           settings: storedSettings,
           media: mergedMedia,
-          services: parsed.services || INITIAL_SERVICES,
+          services: storedServices,
           categories: parsed.categories || INITIAL_CATEGORIES,
-          products: parsed.products || INITIAL_PRODUCTS,
-          projects: parsed.projects || INITIAL_PROJECTS,
+          products: storedProducts,
+          projects: storedProjects,
           pages: storedPages,
           pageVersions: parsed.pageVersions || [],
           quotes: parsed.quotes || [],
           navigation: parsed.navigation || INITIAL_NAVIGATION,
           footer: parsed.footer || INITIAL_FOOTER,
-          auditLogs: parsed.auditLogs || [],
+          auditLogs: (parsed.auditLogs || []).slice(0, 50),
           currentUser: parsed.currentUser !== undefined ? parsed.currentUser : null,
           isSupabaseConnected: false,
         };
@@ -156,13 +213,14 @@ class StoreService {
 
   // --- Supabase Cloud Sync Initialization ---
   private async initSupabase() {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
 
     try {
       // 1. Session check
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await client.auth.getSession();
       if (session?.user) {
-        const { data: profile } = await supabase
+        const { data: profile } = await client
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
@@ -178,9 +236,9 @@ class StoreService {
       }
 
       // Listen for auth changes
-      supabase.auth.onAuthStateChange(async (_event, session) => {
+      client.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user) {
-          const { data: profile } = await supabase
+          const { data: profile } = await client
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
@@ -211,15 +269,15 @@ class StoreService {
         quotesRes,
         mediaRes,
       ] = await Promise.all([
-        supabase.from('site_settings').select('*').eq('id', 'default').single(),
-        supabase.from('services').select('*').order('sort_order', { ascending: true }),
-        supabase.from('categories').select('*').order('sort_order', { ascending: true }),
-        supabase.from('products').select('*').order('sort_order', { ascending: true }),
-        supabase.from('projects').select('*').order('sort_order', { ascending: true }),
-        supabase.from('pages').select('*'),
-        supabase.from('page_sections').select('*').order('sort_order', { ascending: true }),
-        supabase.from('quotes').select('*').order('created_at', { ascending: false }),
-        supabase.from('media').select('*').order('created_at', { ascending: false }),
+        client.from('site_settings').select('*').eq('id', 'default').single(),
+        client.from('services').select('*').order('sort_order', { ascending: true }),
+        client.from('categories').select('*').order('sort_order', { ascending: true }),
+        client.from('products').select('*').order('sort_order', { ascending: true }),
+        client.from('projects').select('*').order('sort_order', { ascending: true }),
+        client.from('pages').select('*'),
+        client.from('page_sections').select('*').order('sort_order', { ascending: true }),
+        client.from('quotes').select('*').order('created_at', { ascending: false }),
+        client.from('media').select('*').order('created_at', { ascending: false }),
       ]);
 
       if (settingsRes.data) {
@@ -267,24 +325,24 @@ class StoreService {
       this.state.isSupabaseConnected = true;
 
       // Realtime subscriptions
-      supabase
+      client
         .channel('hinov-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, async () => {
-          const { data } = await supabase!.from('quotes').select('*').order('created_at', { ascending: false });
+          const { data } = await client.from('quotes').select('*').order('created_at', { ascending: false });
           if (data) {
             this.state.quotes = data;
             this.persist();
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
-          const { data } = await supabase!.from('products').select('*').order('sort_order', { ascending: true });
+          const { data } = await client.from('products').select('*').order('sort_order', { ascending: true });
           if (data) {
             this.state.products = data;
             this.persist();
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, async () => {
-          const { data } = await supabase!.from('site_settings').select('*').eq('id', 'default').single();
+          const { data } = await client.from('site_settings').select('*').eq('id', 'default').single();
           if (data) {
             this.state.settings = { ...this.state.settings, ...data };
             this.persist();
@@ -299,11 +357,43 @@ class StoreService {
     }
   }
 
+  private getSanitizedStateForLocalStorage(): any {
+    return {
+      ...this.state,
+      // Strip base64 data URLs exceeding 2KB to prevent LocalStorage QuotaExceededError
+      media: (this.state.media || []).map((m) => ({
+        ...m,
+        url: m.url && m.url.startsWith('data:') && m.url.length > 2048 ? '' : m.url,
+        poster_url: m.poster_url && m.poster_url.startsWith('data:') && m.poster_url.length > 2048 ? '' : m.poster_url,
+      })),
+      // Keep only recent audit logs in localStorage
+      auditLogs: (this.state.auditLogs || []).slice(0, 30),
+      // Keep only recent page versions
+      pageVersions: (this.state.pageVersions || []).slice(0, 10),
+    };
+  }
+
   private persist() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+      const payload = JSON.stringify(this.getSanitizedStateForLocalStorage());
+      localStorage.setItem(STORAGE_KEY, payload);
     } catch (e) {
-      console.error('Error saving HINOV CMS state:', e);
+      console.warn('LocalStorage Quota reached, performing memory cleanup:', e);
+      try {
+        const minimalPayload = JSON.stringify({
+          ...this.getSanitizedStateForLocalStorage(),
+          auditLogs: [],
+          pageVersions: [],
+          media: (this.state.media || []).slice(0, 20).map((m) => ({
+            ...m,
+            url: m.url?.startsWith('data:') ? '' : m.url,
+            poster_url: m.poster_url?.startsWith('data:') ? '' : m.poster_url,
+          })),
+        });
+        localStorage.setItem(STORAGE_KEY, minimalPayload);
+      } catch (fallbackErr) {
+        console.warn('LocalStorage save skipped (in-memory state preserved):', fallbackErr);
+      }
     }
     this.notify();
   }
@@ -611,9 +701,14 @@ class StoreService {
     const secIndex = page.sections.findIndex((s) => s.id === sectionId);
     if (secIndex === -1) return;
 
+    const sanitizedUpdates = { ...updates };
+    if ('image_url' in sanitizedUpdates) sanitizedUpdates.image_url = ensureStringUrl(sanitizedUpdates.image_url);
+    if ('video_url' in sanitizedUpdates) sanitizedUpdates.video_url = ensureStringUrl(sanitizedUpdates.video_url);
+    if ('video_poster_url' in sanitizedUpdates) sanitizedUpdates.video_poster_url = ensureStringUrl(sanitizedUpdates.video_poster_url);
+
     page.sections[secIndex] = {
       ...page.sections[secIndex],
-      ...updates,
+      ...sanitizedUpdates,
     };
     page.updated_at = new Date().toISOString();
     this.logAction('Modification de section', 'Section', sectionId, page.sections[secIndex].title, `Page: ${page.title}`);
@@ -622,7 +717,7 @@ class StoreService {
     this.runSupabase(() =>
       supabase!
         .from('page_sections')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...sanitizedUpdates, updated_at: new Date().toISOString() })
         .eq('id', sectionId)
     );
   }
@@ -634,6 +729,9 @@ class StoreService {
     const maxSort = page.sections.reduce((max, s) => Math.max(max, s.sort_order), 0);
     const section: PageSection = {
       ...newSection,
+      image_url: ensureStringUrl(newSection.image_url),
+      video_url: ensureStringUrl(newSection.video_url),
+      video_poster_url: ensureStringUrl(newSection.video_poster_url),
       id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       page_id: pageId,
       sort_order: maxSort + 1,
@@ -726,22 +824,27 @@ class StoreService {
   public updateService(id: string, updates: Partial<ServiceItem>) {
     const index = this.state.services.findIndex((s) => s.id === id);
     if (index === -1) return;
+    const sanitizedUpdates = { ...updates };
+    if ('featured_image_url' in sanitizedUpdates) {
+      sanitizedUpdates.featured_image_url = ensureStringUrl(sanitizedUpdates.featured_image_url);
+    }
     this.state.services[index] = {
       ...this.state.services[index],
-      ...updates,
+      ...sanitizedUpdates,
       updated_at: new Date().toISOString(),
     };
     this.logAction('Modification de service', 'Service', id, this.state.services[index].name);
     this.persist();
 
     this.runSupabase(() =>
-      supabase!.from('services').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id)
+      supabase!.from('services').update({ ...sanitizedUpdates, updated_at: new Date().toISOString() }).eq('id', id)
     );
   }
 
   public addService(newService: Omit<ServiceItem, 'id' | 'created_at' | 'updated_at'>): ServiceItem {
     const service: ServiceItem = {
       ...newService,
+      featured_image_url: ensureStringUrl(newService.featured_image_url),
       id: `serv-${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -823,14 +926,18 @@ class StoreService {
     const index = this.state.products.findIndex((p) => p.id === id);
     if (index === -1) return;
 
-    if (updates.category_id && updates.category_id !== this.state.products[index].category_id) {
-      const cat = this.state.categories.find((c) => c.id === updates.category_id);
-      if (cat) updates.category_name = cat.name;
+    const sanitizedUpdates = { ...updates };
+    if ('primary_image_url' in sanitizedUpdates) {
+      sanitizedUpdates.primary_image_url = ensureStringUrl(sanitizedUpdates.primary_image_url);
+    }
+    if (sanitizedUpdates.category_id && sanitizedUpdates.category_id !== this.state.products[index].category_id) {
+      const cat = this.state.categories.find((c) => c.id === sanitizedUpdates.category_id);
+      if (cat) sanitizedUpdates.category_name = cat.name;
     }
 
     this.state.products[index] = {
       ...this.state.products[index],
-      ...updates,
+      ...sanitizedUpdates,
       updated_at: new Date().toISOString(),
     };
     this.logAction('Modification de produit', 'Produit', id, this.state.products[index].name);
@@ -846,6 +953,7 @@ class StoreService {
     const cat = this.state.categories.find((c) => c.id === newProd.category_id);
     const prod: ProductItem = {
       ...newProd,
+      primary_image_url: ensureStringUrl(newProd.primary_image_url),
       category_name: cat ? cat.name : 'Général',
       id: `prod-${Date.now()}`,
       created_at: new Date().toISOString(),
@@ -910,22 +1018,27 @@ class StoreService {
   public updateProject(id: string, updates: Partial<ProjectItem>) {
     const index = this.state.projects.findIndex((p) => p.id === id);
     if (index === -1) return;
+    const sanitizedUpdates = { ...updates };
+    if ('featured_image_url' in sanitizedUpdates) {
+      sanitizedUpdates.featured_image_url = ensureStringUrl(sanitizedUpdates.featured_image_url);
+    }
     this.state.projects[index] = {
       ...this.state.projects[index],
-      ...updates,
+      ...sanitizedUpdates,
       updated_at: new Date().toISOString(),
     };
     this.logAction('Modification de réalisation', 'Réalisation', id, this.state.projects[index].title);
     this.persist();
 
     this.runSupabase(() =>
-      supabase!.from('projects').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id)
+      supabase!.from('projects').update({ ...sanitizedUpdates, updated_at: new Date().toISOString() }).eq('id', id)
     );
   }
 
   public addProject(newProj: Omit<ProjectItem, 'id' | 'created_at' | 'updated_at'>): ProjectItem {
     const proj: ProjectItem = {
       ...newProj,
+      featured_image_url: ensureStringUrl(newProj.featured_image_url),
       id: `proj-${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -994,7 +1107,7 @@ class StoreService {
   public addMedia(item: Omit<MediaItem, 'id' | 'created_at'>): MediaItem {
     const newMedia: MediaItem = {
       ...item,
-      id: `med-${Date.now()}`,
+      id: (item as any).id || `med-${Date.now()}`,
       created_at: new Date().toISOString(),
       uploaded_by: this.state.currentUser?.full_name,
     };
@@ -1002,8 +1115,25 @@ class StoreService {
     this.logAction('Téléversement média', 'Média', newMedia.id, newMedia.title);
     this.persist();
 
-    const { used_in, ...mediaData } = newMedia;
-    this.runSupabase(() => supabase!.from('media').insert(mediaData));
+    // Clean payload strictly conforming to Supabase media schema
+    const isUuid = (val?: string) => !!val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    const mediaPayload: Record<string, any> = {
+      id: newMedia.id,
+      filename: (newMedia as any).filename || newMedia.file_name || `${newMedia.id}.jpg`,
+      url: newMedia.url,
+      mime_type: newMedia.mime_type || (newMedia.media_type === 'video' ? 'video/mp4' : 'image/jpeg'),
+      file_size: Number(newMedia.file_size) || 0,
+      title: newMedia.title || 'Média sans titre',
+      alt_text: newMedia.alt_text || '',
+      category: newMedia.category || 'General',
+    };
+    if (newMedia.storage_path) mediaPayload.storage_path = newMedia.storage_path;
+    if (newMedia.width) mediaPayload.width = newMedia.width;
+    if (newMedia.height) mediaPayload.height = newMedia.height;
+    if (newMedia.description) mediaPayload.description = newMedia.description;
+    if (isUuid(newMedia.uploaded_by)) mediaPayload.uploaded_by = newMedia.uploaded_by;
+
+    this.runSupabase(() => supabase!.from('media').insert(mediaPayload));
 
     return newMedia;
   }
@@ -1015,8 +1145,21 @@ class StoreService {
     this.logAction('Modification métadonnées média', 'Média', id, this.state.media[index].title);
     this.persist();
 
-    const { used_in, ...mediaUpdates } = updates;
-    this.runSupabase(() => supabase!.from('media').update(mediaUpdates).eq('id', id));
+    const isUuid = (val?: string) => !!val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    const mediaUpdates: Record<string, any> = {};
+    if (updates.title !== undefined) mediaUpdates.title = updates.title;
+    if (updates.alt_text !== undefined) mediaUpdates.alt_text = updates.alt_text;
+    if (updates.category !== undefined) mediaUpdates.category = updates.category;
+    if (updates.description !== undefined) mediaUpdates.description = updates.description;
+    if (updates.url !== undefined) mediaUpdates.url = updates.url;
+    if (updates.file_size !== undefined) mediaUpdates.file_size = updates.file_size;
+    if (updates.mime_type !== undefined) mediaUpdates.mime_type = updates.mime_type;
+    if (updates.storage_path !== undefined) mediaUpdates.storage_path = updates.storage_path;
+    if (isUuid(updates.uploaded_by)) mediaUpdates.uploaded_by = updates.uploaded_by;
+
+    if (Object.keys(mediaUpdates).length > 0) {
+      this.runSupabase(() => supabase!.from('media').update(mediaUpdates).eq('id', id));
+    }
   }
 
   public deleteMedia(id: string): { success: boolean; usageCount: number } {
@@ -1026,6 +1169,9 @@ class StoreService {
     this.state.media = this.state.media.filter((m) => m.id !== id);
     this.logAction('Suppression média', 'Média', id, mediaWithUsage?.title || id, `Utilisé dans ${usageCount} emplacement(s)`);
     this.persist();
+
+    // Clean up local IndexedDB blob if applicable
+    deleteLocalBlob(id);
 
     this.runSupabase(() => supabase!.from('media').delete().eq('id', id));
 

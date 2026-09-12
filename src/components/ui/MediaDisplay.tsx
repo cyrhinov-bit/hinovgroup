@@ -46,18 +46,29 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
   // Auto detect if the provided resource is a video
   const isVideo =
     mediaType === 'video' ||
-    (videoUrl && videoUrl.trim().length > 0) ||
-    (imageUrl &&
-      (imageUrl.endsWith('.mp4') || imageUrl.endsWith('.webm') || imageUrl.endsWith('.mov')));
+    Boolean(videoUrl && videoUrl.trim().length > 0) ||
+    Boolean(
+      imageUrl &&
+        (imageUrl.startsWith('blob:') ||
+          imageUrl.startsWith('data:video/') ||
+          imageUrl.includes('.mp4') ||
+          imageUrl.includes('.webm') ||
+          imageUrl.includes('.mov') ||
+          imageUrl.includes('.ogg') ||
+          imageUrl.includes('youtube.com') ||
+          imageUrl.includes('youtu.be') ||
+          imageUrl.includes('vimeo.com'))
+    );
 
   const resolvedVideoUrl = videoUrl || (isVideo ? imageUrl : undefined);
-  const resolvedImageUrl = imageUrl || videoPosterUrl;
+  const resolvedImageUrl = (!isVideo ? imageUrl : undefined) || videoPosterUrl;
 
   // Check if it's an external embed (YouTube / Vimeo)
-  const isYouTube =
+  const isYouTube = Boolean(
     resolvedVideoUrl &&
-    (resolvedVideoUrl.includes('youtube.com') || resolvedVideoUrl.includes('youtu.be'));
-  const isVimeo = resolvedVideoUrl && resolvedVideoUrl.includes('vimeo.com');
+      (resolvedVideoUrl.includes('youtube.com') || resolvedVideoUrl.includes('youtu.be'))
+  );
+  const isVimeo = Boolean(resolvedVideoUrl && resolvedVideoUrl.includes('vimeo.com'));
 
   const getYouTubeEmbedUrl = (url: string) => {
     let videoId = '';
@@ -65,6 +76,10 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
       videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
     } else if (url.includes('watch?v=')) {
       videoId = url.split('watch?v=')[1]?.split('&')[0] || '';
+    } else if (url.includes('/shorts/')) {
+      videoId = url.split('/shorts/')[1]?.split('?')[0] || '';
+    } else if (url.includes('/embed/')) {
+      videoId = url.split('/embed/')[1]?.split('?')[0] || '';
     }
     // Strictly disable controls, keyboard and branding for non-interactive playback mode
     const controlsParam = interactive ? 1 : 0;

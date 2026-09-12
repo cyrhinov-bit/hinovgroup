@@ -12,6 +12,7 @@ interface ConfirmModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'primary' | 'secondary';
+  confirmVariant?: 'danger' | 'primary' | 'secondary' | string;
   warningNote?: string;
   isLoading?: boolean;
 }
@@ -24,17 +25,19 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   confirmLabel = 'Confirmer',
   cancelLabel = 'Annuler',
-  variant = 'danger',
+  variant,
+  confirmVariant = 'danger',
   warningNote,
   isLoading = false,
 }) => {
+  const activeVariant = variant || (confirmVariant === 'primary' ? 'primary' : confirmVariant === 'secondary' ? 'secondary' : 'danger');
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="md">
       <div className="space-y-4">
         <div className="flex items-start gap-3.5">
           <div
             className={`p-2.5 rounded-xl shrink-0 ${
-              variant === 'danger'
+              activeVariant === 'danger'
                 ? 'bg-red-50 text-red-600'
                 : 'bg-[#FDF5EB] text-[#D38323]'
             }`}
@@ -56,7 +59,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {cancelLabel}
           </Button>
           <Button
-            variant={variant === 'danger' ? 'danger' : 'primary'}
+            variant={activeVariant === 'danger' ? 'danger' : 'primary'}
             size="md"
             onClick={() => {
               onConfirm();

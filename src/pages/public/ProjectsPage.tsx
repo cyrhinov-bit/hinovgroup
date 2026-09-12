@@ -4,6 +4,7 @@ import { useStore } from '../../hooks/useStore';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { MediaDisplay } from '../../components/ui/MediaDisplay';
 import { ArrowRight, Briefcase, Calendar, User } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
@@ -95,13 +96,17 @@ export const ProjectsPage: React.FC = () => {
                 <Card key={project.id} hoverEffect className="overflow-hidden flex flex-col justify-between">
                   <div>
                     <div className="aspect-[16/10] bg-gray-100 relative overflow-hidden">
-                      <img
-                        src={project.featured_image_url}
-                        alt={project.title}
+                      <MediaDisplay
+                        imageUrl={project.featured_image_url}
+                        imageAlt={project.title}
                         className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
+                        aspectRatioClassName="aspect-[16/10]"
+                        autoPlay={false}
+                        loop={false}
+                        muted={true}
+                        showControls={false}
                       />
-                      <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/70 text-white text-xs font-semibold backdrop-blur-xs">
+                      <span className="absolute top-3 left-3 z-10 px-3 py-1 rounded-full bg-black/70 text-white text-xs font-semibold backdrop-blur-xs">
                         {project.category}
                       </span>
                     </div>
