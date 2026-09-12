@@ -170,7 +170,7 @@ export const INITIAL_MEDIA: MediaItem[] = [
     id: 'med-vid-demo',
     filename: 'hinov-presentation-video.mp4',
     file_name: 'hinov-presentation-video.mp4',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    url: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-with-charts-and-graphs-41334-large.mp4',
     mime_type: 'video/mp4',
     media_type: 'video',
     file_size: 5200000,

@@ -39,6 +39,23 @@ export function ensureStringUrl(val: any): string {
   return '';
 }
 
+export const DEFAULT_SERVICE_MEDIA: Record<string, string> = {
+  informatique: 'https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-1728-large.mp4',
+  imprimerie: 'https://assets.mixkit.co/videos/preview/mixkit-printing-machine-printing-pages-of-a-book-41484-large.mp4',
+  'developpement-logiciels': 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-typing-on-a-keyboard-and-using-a-mouse-42790-large.mp4',
+  'cablage-reseau-informatique': 'https://assets.mixkit.co/videos/preview/mixkit-network-switch-with-cables-in-a-server-room-41315-large.mp4',
+  'librairie-papeterie': 'https://images.unsplash.com/photo-1507842229496-c1184a2c1402?auto=format&fit=crop&w=1200&q=80',
+};
+
+export function cleanMediaUrl(url: any, fallback: string = ''): string {
+  const str = ensureStringUrl(url);
+  if (!str) return fallback;
+  if (str.startsWith('blob:')) {
+    return fallback;
+  }
+  return str;
+}
+
 export interface AppState {
   settings: SiteSettings;
   media: MediaItem[];
@@ -187,7 +204,7 @@ class StoreService {
 
         const storedServices = (parsed.services || INITIAL_SERVICES).map((s: any) => ({
           ...s,
-          featured_image_url: ensureStringUrl(s.featured_image_url),
+          featured_image_url: cleanMediaUrl(s.featured_image_url, DEFAULT_SERVICE_MEDIA[s.slug] || s.featured_image_url),
         }));
 
         const storedProducts = (parsed.products || INITIAL_PRODUCTS).map((p: any) => ({
@@ -325,7 +342,10 @@ class StoreService {
       }
 
       if (servicesRes.data && servicesRes.data.length > 0) {
-        this.state.services = servicesRes.data;
+        this.state.services = servicesRes.data.map((s: any) => ({
+          ...s,
+          featured_image_url: cleanMediaUrl(s.featured_image_url, DEFAULT_SERVICE_MEDIA[s.slug] || s.featured_image_url),
+        }));
       }
 
       if (categoriesRes.data && categoriesRes.data.length > 0) {
