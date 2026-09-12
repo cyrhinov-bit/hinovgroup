@@ -741,7 +741,7 @@ export const INITIAL_NAVIGATION: NavigationItem[] = [
   },
   { id: 'nav-projects', label: 'Réalisations', path: '/realisations', sort_order: 4, is_visible: true },
   { id: 'nav-catalog', label: 'Catalogue', path: '/catalogue', sort_order: 5, is_visible: true },
-  { id: 'nav-librairie-catalog', label: 'Catalogue Librairie', path: LIBRAIRIE_CATALOGUE_URL, sort_order: 6, is_visible: true },,
+  { id: 'nav-librairie-catalog', label: 'Catalogue Librairie', path: LIBRAIRIE_CATALOGUE_URL, sort_order: 6, is_visible: true },
   { id: 'nav-contact', label: 'Contact', path: '/contact', sort_order: 7, is_visible: true },
 ];
 
