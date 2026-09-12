@@ -260,7 +260,7 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({ section, isPre
                   imageAlt={section.image_alt || section.title}
                   videoUrl={
                     section.video_url ||
-                    'https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-1728-large.mp4'
+                    'https://vjs.zencdn.net/v/oceans.mp4'
                   }
                   videoPosterUrl={section.video_poster_url || section.image_url}
                   autoPlay={section.video_autoplay ?? true}

@@ -40,10 +40,10 @@ export function ensureStringUrl(val: any): string {
 }
 
 export const DEFAULT_SERVICE_MEDIA: Record<string, string> = {
-  informatique: 'https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-1728-large.mp4',
-  imprimerie: 'https://assets.mixkit.co/videos/preview/mixkit-printing-machine-printing-pages-of-a-book-41484-large.mp4',
-  'developpement-logiciels': 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-typing-on-a-keyboard-and-using-a-mouse-42790-large.mp4',
-  'cablage-reseau-informatique': 'https://assets.mixkit.co/videos/preview/mixkit-network-switch-with-cables-in-a-server-room-41315-large.mp4',
+  informatique: 'https://vjs.zencdn.net/v/oceans.mp4',
+  imprimerie: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80',
+  'developpement-logiciels': 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  'cablage-reseau-informatique': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=1200&q=80',
   'librairie-papeterie': 'https://images.unsplash.com/photo-1507842229496-c1184a2c1402?auto=format&fit=crop&w=1200&q=80',
 };
 
