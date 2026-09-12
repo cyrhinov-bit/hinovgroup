@@ -18,7 +18,7 @@ import {
 export const Footer: React.FC = () => {
   const { settings, services, footer, currentUser } = useStore();
 
-  const publishedServices = services.filter((s) => s.status === 'published');
+  const publishedServices = (services || []).filter((s) => Boolean(s && s.status === 'published'));
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

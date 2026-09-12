@@ -227,9 +227,9 @@ class StoreService {
           pages: storedPages,
           pageVersions: parsed.pageVersions || [],
           quotes: parsed.quotes || [],
-          navigation: parsed.navigation || INITIAL_NAVIGATION,
-          footer: parsed.footer || INITIAL_FOOTER,
-          auditLogs: (parsed.auditLogs || []).slice(0, 50),
+          navigation: (parsed.navigation || INITIAL_NAVIGATION).filter(Boolean),
+          footer: (parsed.footer || INITIAL_FOOTER).filter(Boolean),
+          auditLogs: (parsed.auditLogs || []).filter(Boolean).slice(0, 50),
           currentUser: parsed.currentUser !== undefined ? parsed.currentUser : null,
           isSupabaseConnected: false,
         };

@@ -33,8 +33,8 @@ export const Header: React.FC = () => {
     setServicesDropdownOpen(false);
   }, [location.pathname]);
 
-  const visibleNav = navigation.filter((item) => item.is_visible);
-  const publishedServices = services.filter((s) => s.status === 'published');
+  const visibleNav = (navigation || []).filter((item) => Boolean(item && item.is_visible));
+  const publishedServices = (services || []).filter((s) => Boolean(s && s.status === 'published'));
 
   return (
     <>

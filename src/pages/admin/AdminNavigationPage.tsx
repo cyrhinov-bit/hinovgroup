@@ -13,7 +13,7 @@ export const AdminNavigationPage: React.FC = () => {
   const [newLabel, setNewLabel] = useState('');
   const [newPath, setNewPath] = useState('');
 
-  const sortedNav = [...navigation].sort((a, b) => a.sort_order - b.sort_order);
+  const sortedNav = [...(navigation || []).filter(Boolean)].sort((a, b) => a.sort_order - b.sort_order);
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
