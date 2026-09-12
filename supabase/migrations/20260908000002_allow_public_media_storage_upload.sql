@@ -40,3 +40,4 @@ USING (bucket_id = 'media');
 CREATE POLICY "Allow Delete Media Bucket"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'media');
+
