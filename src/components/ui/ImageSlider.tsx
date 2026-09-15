@@ -17,6 +17,7 @@ export interface ImageSliderProps {
   autoPlayInterval?: number;
   className?: string;
   aspectRatioClassName?: string;
+  roundedClassName?: string;
   showThumbnails?: boolean;
   showIndicators?: boolean;
   showArrows?: boolean;
@@ -31,6 +32,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
   autoPlayInterval = 4500,
   className = '',
   aspectRatioClassName = 'aspect-[4/3]',
+  roundedClassName = 'rounded-2xl',
   showThumbnails = true,
   showIndicators = true,
   showArrows = true,
@@ -136,7 +138,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
     <div className={`w-full flex flex-col space-y-3 ${className}`}>
       {/* Main Slider Display Container */}
       <div
-        className={`group relative w-full overflow-hidden rounded-2xl bg-black shadow-xl border border-black/10 select-none ${aspectRatioClassName}`}
+        className={`group relative w-full overflow-hidden ${roundedClassName} bg-black shadow-xl border border-black/10 select-none ${aspectRatioClassName}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}

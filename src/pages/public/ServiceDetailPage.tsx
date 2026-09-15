@@ -79,8 +79,28 @@ export const ServiceDetailPage: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* Breadcrumb & Hero */}
-      <section className="bg-white border-b border-black/5 py-12 sm:py-16">
+      {/* 1. Full-Width Top Sliding Images Banner - Positioned right below the navigation menu */}
+      <section className="w-full bg-black/95 relative border-b border-black/10 overflow-hidden">
+        <div className="w-full">
+          <ImageSlider
+            images={sliderImages}
+            alt={`Galerie ${service.name}`}
+            badgeLabel={`Pôle ${service.name} • HINOV`}
+            aspectRatioClassName="aspect-[16/7] sm:aspect-[21/7] max-h-[380px] w-full"
+            roundedClassName="rounded-none"
+            autoPlay={true}
+            autoPlayInterval={4500}
+            showThumbnails={false}
+            showArrows={sliderImages.length > 1}
+            showIndicators={sliderImages.length > 1}
+            enableLightbox={true}
+            className="rounded-none border-0 shadow-none space-y-0"
+          />
+        </div>
+      </section>
+
+      {/* 2. Breadcrumb & Hero Section with Dedicated Video / Media Player */}
+      <section className="bg-white border-b border-black/5 py-10 sm:py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-semibold text-[#5F6673] mb-6">
             <Link to="/" className="hover:text-[#4A94D1]">Accueil</Link>
@@ -91,6 +111,7 @@ export const ServiceDetailPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            {/* Left Info Column */}
             <div className="lg:col-span-7 space-y-6">
               <div className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border ${accentBadge}`}>
                 <span className="w-2.5 h-2.5 rounded-full bg-current" />
@@ -123,17 +144,20 @@ export const ServiceDetailPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Right Dedicated Video / Media Player */}
             <div className="lg:col-span-5">
-              <ImageSlider
-                images={sliderImages}
-                alt={service.name}
-                badgeLabel={service.name}
-                aspectRatioClassName="aspect-[4/3]"
-                autoPlay={true}
-                autoPlayInterval={4500}
-                showThumbnails={sliderImages.length > 1}
-                enableLightbox={true}
-              />
+              <div className="rounded-2xl overflow-hidden shadow-2xl border border-black/10 aspect-[4/3] relative bg-black">
+                <MediaDisplay
+                  imageUrl={service.featured_image_url}
+                  imageAlt={service.name}
+                  className="w-full h-full object-cover"
+                  aspectRatioClassName="aspect-[4/3]"
+                  autoPlay={true}
+                  loop={true}
+                  muted={true}
+                  badgeLabel="Vidéo illustrative"
+                />
+              </div>
             </div>
           </div>
         </div>
