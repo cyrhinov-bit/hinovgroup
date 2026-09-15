@@ -79,30 +79,10 @@ export const ServiceDetailPage: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* 1. Full-Width Top Sliding Images Banner - Positioned right below the navigation menu */}
-      <section className="w-full bg-black/95 relative border-b border-black/10 overflow-hidden">
-        <div className="w-full">
-          <ImageSlider
-            images={sliderImages}
-            alt={`Galerie ${service.name}`}
-            badgeLabel={`Pôle ${service.name} • HINOV`}
-            aspectRatioClassName="aspect-[16/7] sm:aspect-[21/7] max-h-[380px] w-full"
-            roundedClassName="rounded-none"
-            autoPlay={true}
-            autoPlayInterval={4500}
-            showThumbnails={false}
-            showArrows={sliderImages.length > 1}
-            showIndicators={sliderImages.length > 1}
-            enableLightbox={true}
-            className="rounded-none border-0 shadow-none space-y-0"
-          />
-        </div>
-      </section>
-
-      {/* 2. Breadcrumb & Hero Section with Dedicated Video / Media Player */}
-      <section className="bg-white border-b border-black/5 py-10 sm:py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#5F6673] mb-6">
+      {/* 1. Top Section: Breadcrumb & Framed Sliding Images Banner */}
+      <section className="w-full bg-[#F5F7FA] border-b border-black/5 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#5F6673]">
             <Link to="/" className="hover:text-[#4A94D1]">Accueil</Link>
             <span>/</span>
             <Link to="/services" className="hover:text-[#4A94D1]">Services</Link>
@@ -110,6 +90,27 @@ export const ServiceDetailPage: React.FC = () => {
             <span className="text-[#111111] font-bold">{service.name}</span>
           </div>
 
+          <div className="w-full">
+            <ImageSlider
+              images={sliderImages}
+              alt={`Galerie ${service.name}`}
+              badgeLabel={`Galerie du pôle • ${service.name}`}
+              aspectRatioClassName="aspect-[16/7] sm:aspect-[21/8] md:aspect-[24/8] max-h-[360px] w-full"
+              roundedClassName="rounded-2xl shadow-xl border border-black/10"
+              autoPlay={true}
+              autoPlayInterval={4500}
+              showThumbnails={false}
+              showArrows={sliderImages.length > 1}
+              showIndicators={sliderImages.length > 1}
+              enableLightbox={true}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Hero Presentation Section with Dedicated Video / Media Player */}
+      <section className="bg-white border-b border-black/5 py-10 sm:py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* Left Info Column */}
             <div className="lg:col-span-7 space-y-6">
