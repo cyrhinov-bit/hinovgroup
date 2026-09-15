@@ -204,6 +204,32 @@ export const ServiceDetailPage: React.FC = () => {
                   </ul>
                 </Card>
               )}
+
+              {/* Immersion & Photo Gallery Card */}
+              {sliderImages.length > 1 && (
+                <Card className="p-6 sm:p-8 space-y-5">
+                  <div>
+                    <h2 className="text-2xl font-extrabold text-[#111111]">
+                      Immersion visuelle & Réalisations
+                    </h2>
+                    <p className="text-sm text-[#5F6673] mt-1">
+                      Découvrez nos équipements, ateliers et réalisations en images ({sliderImages.length} visuels)
+                    </p>
+                  </div>
+
+                  <ImageSlider
+                    images={sliderImages}
+                    alt={service.name}
+                    aspectRatioClassName="aspect-[16/9]"
+                    autoPlay={true}
+                    autoPlayInterval={4500}
+                    showThumbnails={true}
+                    showArrows={true}
+                    showIndicators={true}
+                    enableLightbox={true}
+                  />
+                </Card>
+              )}
             </div>
 
             {/* Right Sticky Sidebar */}

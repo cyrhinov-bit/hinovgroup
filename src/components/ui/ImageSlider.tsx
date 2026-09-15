@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +11,7 @@ import {
 import { MediaDisplay, isVideoResource } from './MediaDisplay';
 
 export interface ImageSliderProps {
-  images: string[];
+  images?: string[];
   alt?: string;
   autoPlay?: boolean;
   autoPlayInterval?: number;
@@ -37,10 +37,18 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
   badgeLabel,
   enableLightbox = true,
 }) => {
-  // Clean valid non-empty media urls
-  const validImages = Array.isArray(images)
-    ? images.map((img) => (typeof img === 'string' ? img.trim() : '')).filter(Boolean)
-    : [];
+  // Extract and clean valid non-empty media urls
+  const validImages: string[] = React.useMemo(() => {
+    if (!Array.isArray(images)) return [];
+    return images
+      .map((img) => {
+        if (!img) return '';
+        if (typeof img === 'string') return img.trim();
+        if (typeof img === 'object' && (img as any).url) return String((img as any).url).trim();
+        return '';
+      })
+      .filter((u) => u.length > 0 && !u.startsWith('blob:'));
+  }, [images]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -51,26 +59,32 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
 
   const total = validImages.length;
 
-  // Reset index if it exceeds total
+  // Safe fallback if images is empty
+  const displayImages = total > 0 ? validImages : [
+    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
+  ];
+  const safeTotal = displayImages.length;
+
+  // Reset index if out of bounds
   useEffect(() => {
-    if (currentIndex >= total && total > 0) {
+    if (currentIndex >= safeTotal) {
       setCurrentIndex(0);
     }
-  }, [total, currentIndex]);
+  }, [safeTotal, currentIndex]);
 
   const handleNext = useCallback(() => {
-    if (total <= 1) return;
-    setCurrentIndex((prev) => (prev + 1) % total);
-  }, [total]);
+    if (safeTotal <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % safeTotal);
+  }, [safeTotal]);
 
   const handlePrev = useCallback(() => {
-    if (total <= 1) return;
-    setCurrentIndex((prev) => (prev - 1 + total) % total);
-  }, [total]);
+    if (safeTotal <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + safeTotal) % safeTotal);
+  }, [safeTotal]);
 
   // Autoplay timer
   useEffect(() => {
-    if (!isAutoPlayActive || total <= 1 || isHovered || isLightboxOpen) {
+    if (!isAutoPlayActive || safeTotal <= 1 || isHovered || isLightboxOpen) {
       return;
     }
 
@@ -79,7 +93,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
     }, autoPlayInterval);
 
     return () => clearInterval(interval);
-  }, [isAutoPlayActive, total, isHovered, isLightboxOpen, autoPlayInterval, handleNext]);
+  }, [isAutoPlayActive, safeTotal, isHovered, isLightboxOpen, autoPlayInterval, handleNext]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -104,72 +118,72 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
   };
 
   const handleTouchEnd = () => {
-    if (!touchStartX || !touchEndX) return;
+    if (touchStartX === null || touchEndX === null) return;
     const distance = touchStartX - touchEndX;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe) {
+    if (distance > 50) {
       handleNext();
-    } else if (isRightSwipe) {
+    } else if (distance < -50) {
       handlePrev();
     }
-
     setTouchStartX(null);
     setTouchEndX(null);
   };
 
-  // If no image is provided, display standard placeholder
-  if (total === 0) {
-    return (
-      <div
-        className={`relative overflow-hidden rounded-2xl bg-gray-100 border border-black/10 ${aspectRatioClassName} ${className}`}
-      >
-        <img
-          src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80"
-          alt={alt}
-          className="w-full h-full object-cover"
-        />
-        {badgeLabel && (
-          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-bold">
-            {badgeLabel}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  const currentMediaUrl = validImages[currentIndex] || validImages[0];
+  const currentMediaUrl = displayImages[currentIndex] || displayImages[0];
   const isCurrentVideo = isVideoResource(currentMediaUrl);
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      {/* Main Slider Display */}
+    <div className={`w-full flex flex-col space-y-3 ${className}`}>
+      {/* Main Slider Display Container */}
       <div
-        className={`group relative overflow-hidden rounded-2xl bg-black shadow-xl border border-black/10 select-none ${aspectRatioClassName}`}
+        className={`group relative w-full overflow-hidden rounded-2xl bg-black shadow-xl border border-black/10 select-none ${aspectRatioClassName}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Render Active Slide */}
-        <div className="w-full h-full relative">
-          <MediaDisplay
-            key={`slide-${currentIndex}-${currentMediaUrl}`}
-            imageUrl={currentMediaUrl}
-            imageAlt={`${alt} - vue ${currentIndex + 1}/${total}`}
-            className="w-full h-full object-cover transition-opacity duration-500 ease-in-out"
-            aspectRatioClassName="h-full w-full"
-            autoPlay={true}
-            loop={true}
-            muted={true}
-            showControls={false}
-            interactive={false}
-          />
-        </div>
+        {/* Render Slides with Crossfade Animation */}
+        {displayImages.map((mediaUrl, idx) => {
+          const isActive = idx === currentIndex;
+          const isVideo = isVideoResource(mediaUrl);
 
-        {/* Top Badges & Controls Header */}
+          return (
+            <div
+              key={`${idx}-${mediaUrl}`}
+              className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+                isActive ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0'
+              }`}
+            >
+              {isVideo ? (
+                <MediaDisplay
+                  imageUrl={mediaUrl}
+                  imageAlt={`${alt} - visuel ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  aspectRatioClassName="w-full h-full"
+                  autoPlay={isActive}
+                  loop={true}
+                  muted={true}
+                  showControls={false}
+                  interactive={false}
+                />
+              ) : (
+                <img
+                  src={mediaUrl}
+                  alt={`${alt} - vue ${idx + 1}/${safeTotal}`}
+                  className="w-full h-full object-cover"
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  referrerPolicy="no-referrer"
+                />
+              )}
+            </div>
+          );
+        })}
+
+        {/* Ambient Gradient Overlay for Readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30 pointer-events-none z-20" />
+
+        {/* Header Badges & Actions */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-30">
           <div className="flex items-center gap-2">
             {badgeLabel && (
@@ -178,24 +192,24 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
                 {badgeLabel}
               </span>
             )}
-            {total > 1 && (
+            {safeTotal > 1 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white/90 text-[11px] font-mono font-bold border border-white/10">
                 <Layers size={12} className="text-[#4A94D1]" />
-                {currentIndex + 1} / {total}
+                {currentIndex + 1} / {safeTotal}
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-1.5 pointer-events-auto">
-            {/* Play/Pause Autoplay Toggle if multiple slides */}
-            {total > 1 && !isCurrentVideo && (
+            {/* Play/Pause Autoplay Toggle */}
+            {safeTotal > 1 && !isCurrentVideo && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsAutoPlayActive((prev) => !prev);
                 }}
-                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105 cursor-pointer"
                 title={isAutoPlayActive ? 'Suspendre le défilement auto' : 'Activer le défilement auto'}
                 aria-label={isAutoPlayActive ? 'Pause défilement' : 'Play défilement'}
               >
@@ -211,7 +225,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
                   e.stopPropagation();
                   setIsLightboxOpen(true);
                 }}
-                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105 cursor-pointer"
                 title="Agrandir en plein écran"
                 aria-label="Plein écran"
               >
@@ -222,15 +236,16 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
         </div>
 
         {/* Navigation Arrows (Left / Right) */}
-        {showArrows && total > 1 && (
+        {showArrows && safeTotal > 1 && (
           <>
             <button
               type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 handlePrev();
               }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-lg transition-all duration-200 transform hover:scale-110 opacity-80 group-hover:opacity-100 cursor-pointer"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/65 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-lg transition-all duration-200 transform hover:scale-110 cursor-pointer"
               title="Image précédente"
               aria-label="Image précédente"
             >
@@ -240,10 +255,11 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
             <button
               type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 handleNext();
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-lg transition-all duration-200 transform hover:scale-110 opacity-80 group-hover:opacity-100 cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/65 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-lg transition-all duration-200 transform hover:scale-110 cursor-pointer"
               title="Image suivante"
               aria-label="Image suivante"
             >
@@ -253,13 +269,14 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
         )}
 
         {/* Dots Pagination Indicators */}
-        {showIndicators && total > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10">
-            {validImages.map((_, idx) => (
+        {showIndicators && safeTotal > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/55 backdrop-blur-md border border-white/15">
+            {displayImages.map((_, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   setCurrentIndex(idx);
                 }}
@@ -277,9 +294,9 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
       </div>
 
       {/* Thumbnails Navigation Strip */}
-      {showThumbnails && total > 1 && (
+      {showThumbnails && safeTotal > 1 && (
         <div className="flex items-center gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
-          {validImages.map((imgUrl, idx) => {
+          {displayImages.map((imgUrl, idx) => {
             const isSelected = currentIndex === idx;
             return (
               <button
@@ -298,6 +315,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
                   alt={`${alt} vignette ${idx + 1}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  referrerPolicy="no-referrer"
                 />
                 {isSelected && (
                   <span className="absolute inset-0 bg-[#4A94D1]/15 pointer-events-none" />
@@ -311,7 +329,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
         </div>
       )}
 
-      {/* Lightbox Modal */}
+      {/* Fullscreen Lightbox Modal */}
       {isLightboxOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-8 animate-in fade-in duration-200"
@@ -327,7 +345,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
                 {alt}
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-mono">
-                {currentIndex + 1} / {total}
+                {currentIndex + 1} / {safeTotal}
               </span>
             </div>
 
@@ -350,10 +368,11 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
               src={currentMediaUrl}
               alt={`${alt} agrandi`}
               className="max-h-[78vh] max-w-full object-contain rounded-xl shadow-2xl"
+              referrerPolicy="no-referrer"
             />
 
             {/* Lightbox Arrows */}
-            {total > 1 && (
+            {safeTotal > 1 && (
               <>
                 <button
                   type="button"
@@ -376,12 +395,12 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
           </div>
 
           {/* Lightbox Thumbnails */}
-          {total > 1 && (
+          {safeTotal > 1 && (
             <div
               className="flex items-center gap-2 overflow-x-auto max-w-3xl pb-2 z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              {validImages.map((imgUrl, idx) => (
+              {displayImages.map((imgUrl, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -396,6 +415,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
                     src={imgUrl}
                     alt={`Vignette ${idx + 1}`}
                     className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 </button>
               ))}
@@ -406,4 +426,3 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
     </div>
   );
 };
-
