@@ -79,9 +79,9 @@ export const ServiceDetailPage: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* 1. Top Section: Breadcrumb & Framed Sliding Images Banner */}
-      <section className="w-full bg-[#F5F7FA] border-b border-black/5 pt-6 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+      {/* 1. Top Section: Breadcrumb & Sleek Compact Sliding Images Banner */}
+      <section className="w-full bg-[#F5F7FA] border-b border-black/5 pt-4 pb-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-[#5F6673]">
             <Link to="/" className="hover:text-[#4A94D1]">Accueil</Link>
             <span>/</span>
@@ -95,8 +95,8 @@ export const ServiceDetailPage: React.FC = () => {
               images={sliderImages}
               alt={`Galerie ${service.name}`}
               badgeLabel={`Galerie du pôle • ${service.name}`}
-              aspectRatioClassName="aspect-[16/7] sm:aspect-[21/8] md:aspect-[24/8] max-h-[360px] w-full"
-              roundedClassName="rounded-2xl shadow-xl border border-black/10"
+              aspectRatioClassName="h-[170px] sm:h-[220px] md:h-[250px] w-full"
+              roundedClassName="rounded-xl shadow-md border border-black/10"
               autoPlay={true}
               autoPlayInterval={4500}
               showThumbnails={false}
