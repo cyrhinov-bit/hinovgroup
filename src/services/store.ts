@@ -202,10 +202,21 @@ class StoreService {
             }
           : INITIAL_SETTINGS;
 
-        const storedServices = (parsed.services || INITIAL_SERVICES).map((s: any) => ({
-          ...s,
-          featured_image_url: cleanMediaUrl(s.featured_image_url, DEFAULT_SERVICE_MEDIA[s.slug] || s.featured_image_url),
-        }));
+        const storedServices = (parsed.services || INITIAL_SERVICES).map((s: any) => {
+          const initService = INITIAL_SERVICES.find((is) => is.id === s.id);
+          const rawGallery = Array.isArray(s.gallery_urls) && s.gallery_urls.length > 0
+            ? s.gallery_urls
+            : initService?.gallery_urls || [];
+          const cleanGallery = rawGallery
+            .map((u: any) => ensureStringUrl(u))
+            .filter((u: string) => Boolean(u) && !u.startsWith('blob:'));
+
+          return {
+            ...s,
+            featured_image_url: cleanMediaUrl(s.featured_image_url, DEFAULT_SERVICE_MEDIA[s.slug] || s.featured_image_url),
+            gallery_urls: cleanGallery,
+          };
+        });
 
         const storedProducts = (parsed.products || INITIAL_PRODUCTS).map((p: any) => ({
           ...p,
@@ -888,6 +899,11 @@ class StoreService {
     if ('featured_image_url' in sanitizedUpdates) {
       sanitizedUpdates.featured_image_url = ensureStringUrl(sanitizedUpdates.featured_image_url);
     }
+    if ('gallery_urls' in sanitizedUpdates && Array.isArray(sanitizedUpdates.gallery_urls)) {
+      sanitizedUpdates.gallery_urls = sanitizedUpdates.gallery_urls
+        .map((u: any) => ensureStringUrl(u))
+        .filter((u: string) => Boolean(u) && !u.startsWith('blob:'));
+    }
     this.state.services[index] = {
       ...this.state.services[index],
       ...sanitizedUpdates,
@@ -902,9 +918,16 @@ class StoreService {
   }
 
   public addService(newService: Omit<ServiceItem, 'id' | 'created_at' | 'updated_at'>): ServiceItem {
+    const cleanGallery = Array.isArray(newService.gallery_urls)
+      ? newService.gallery_urls
+          .map((u: any) => ensureStringUrl(u))
+          .filter((u: string) => Boolean(u) && !u.startsWith('blob:'))
+      : [];
+
     const service: ServiceItem = {
       ...newService,
       featured_image_url: ensureStringUrl(newService.featured_image_url),
+      gallery_urls: cleanGallery,
       id: `serv-${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

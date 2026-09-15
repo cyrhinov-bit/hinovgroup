@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Button } from '../../components/ui/Button';
 import { MediaDisplay } from '../../components/ui/MediaDisplay';
+import { ImageSlider } from '../../components/ui/ImageSlider';
 import { LIBRAIRIE_CATALOGUE_URL } from '../../lib/constants';
 import { Card } from '../../components/ui/Card';
 import {
@@ -56,6 +57,26 @@ export const ServiceDetailPage: React.FC = () => {
 
   const accentBadge = accentColorMap[service.accent_color] || accentColorMap.blue;
 
+  // Build the complete array of slider images
+  const sliderImages = React.useMemo(() => {
+    const list: string[] = [];
+    if (service.featured_image_url) {
+      list.push(service.featured_image_url);
+    }
+    if (service.gallery_urls && Array.isArray(service.gallery_urls)) {
+      service.gallery_urls.forEach((url) => {
+        if (url && typeof url === 'string' && !list.includes(url)) {
+          list.push(url);
+        }
+      });
+    }
+    return list.length > 0
+      ? list
+      : [
+          'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
+        ];
+  }, [service.featured_image_url, service.gallery_urls]);
+
   return (
     <div className="w-full">
       {/* Breadcrumb & Hero */}
@@ -103,17 +124,16 @@ export const ServiceDetailPage: React.FC = () => {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden shadow-xl border border-black/10 aspect-[4/3] relative bg-black">
-                <MediaDisplay
-                  imageUrl={service.featured_image_url}
-                  imageAlt={service.name}
-                  className="w-full h-full object-cover"
-                  aspectRatioClassName="aspect-[4/3]"
-                  autoPlay={true}
-                  loop={true}
-                  muted={true}
-                />
-              </div>
+              <ImageSlider
+                images={sliderImages}
+                alt={service.name}
+                badgeLabel={service.name}
+                aspectRatioClassName="aspect-[4/3]"
+                autoPlay={true}
+                autoPlayInterval={4500}
+                showThumbnails={sliderImages.length > 1}
+                enableLightbox={true}
+              />
             </div>
           </div>
         </div>

@@ -198,6 +198,12 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     accent_color: 'blue',
     featured_image_url:
       'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1200&q=80',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=1200&q=80',
+    ],
     prestations: [
       'Maintenance de système et réseau informatique',
       'Vente de matériels informatiques',
@@ -230,6 +236,12 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     accent_color: 'orange',
     featured_image_url:
       'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1200&q=80',
+    ],
     prestations: [
       'Impression sur tout support',
       'Impression grand format',
@@ -269,6 +281,12 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     accent_color: 'blue',
     featured_image_url:
       'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
+    ],
     prestations: [
       'Analyse des besoins et spécifications fonctionnelles',
       'Choix des technologies adaptées aux objectifs',
@@ -304,6 +322,12 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     accent_color: 'green',
     featured_image_url:
       'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=1200&q=80',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1520869562399-e772f142f422?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80',
+    ],
     prestations: [
       'Conception d’infrastructures de réseaux informatiques',
       'Installation et câblage structuré (cuivre & fibre)',
@@ -338,6 +362,12 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     accent_color: 'magenta',
     featured_image_url:
       'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=1200&q=80',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1507842229496-c1184a2c1402?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=1200&q=80',
+    ],
     prestations: [
       'Fournitures scolaires complètes pour tous cycles',
       'Accessoires scolaires pratiques et ergonomiques',

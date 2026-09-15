@@ -15,15 +15,27 @@ import {
   Check,
   Image as ImageIcon,
   Film,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  Link as LinkIcon,
+  Sparkles,
 } from 'lucide-react';
 import { Service } from '../../types';
+
+type MediaPickerTarget =
+  | { type: 'featured' }
+  | { type: 'gallery_add' }
+  | { type: 'gallery_replace'; index: number }
+  | null;
 
 export const AdminServicesPage: React.FC = () => {
   const { services, store } = useStore();
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
+  const [mediaPickerTarget, setMediaPickerTarget] = useState<MediaPickerTarget>(null);
   const [newPrestation, setNewPrestation] = useState('');
   const [newAdvantage, setNewAdvantage] = useState('');
+  const [newGalleryUrl, setNewGalleryUrl] = useState('');
 
   const handleSave = () => {
     if (!editingService) return;
@@ -61,6 +73,56 @@ export const AdminServicesPage: React.FC = () => {
     const updated = [...(editingService.advantages || [])];
     updated.splice(index, 1);
     setEditingService({ ...editingService, advantages: updated });
+  };
+
+  // Slider Gallery Handlers
+  const handleAddGalleryImage = (url: string) => {
+    if (!editingService || !url.trim()) return;
+    const current = editingService.gallery_urls || [];
+    setEditingService({
+      ...editingService,
+      gallery_urls: [...current, url.trim()],
+    });
+  };
+
+  const handleReplaceGalleryImage = (index: number, url: string) => {
+    if (!editingService || !url.trim()) return;
+    const current = [...(editingService.gallery_urls || [])];
+    current[index] = url.trim();
+    setEditingService({
+      ...editingService,
+      gallery_urls: current,
+    });
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    if (!editingService) return;
+    const current = [...(editingService.gallery_urls || [])];
+    current.splice(index, 1);
+    setEditingService({
+      ...editingService,
+      gallery_urls: current,
+    });
+  };
+
+  const handleMoveGalleryImage = (index: number, direction: 'up' | 'down') => {
+    if (!editingService) return;
+    const current = [...(editingService.gallery_urls || [])];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= current.length) return;
+    const temp = current[index];
+    current[index] = current[targetIdx];
+    current[targetIdx] = temp;
+    setEditingService({
+      ...editingService,
+      gallery_urls: current,
+    });
+  };
+
+  const handleAddGalleryUrlInput = () => {
+    if (!newGalleryUrl.trim() || !editingService) return;
+    handleAddGalleryImage(newGalleryUrl.trim());
+    setNewGalleryUrl('');
   };
 
   return (
@@ -219,7 +281,7 @@ export const AdminServicesPage: React.FC = () => {
             {/* Featured image/video with MediaPicker */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
-                Photo ou Vidéo illustrative du service
+                Photo ou Vidéo de couverture principale
               </label>
               <div className="flex items-center gap-4 p-3 rounded-xl border border-black/10 bg-[#F5F7FA]">
                 {editingService.featured_image_url ? (
@@ -249,12 +311,145 @@ export const AdminServicesPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     className="mt-1"
-                    onClick={() => setIsMediaPickerOpen(true)}
+                    onClick={() => setMediaPickerTarget({ type: 'featured' })}
                   >
-                    Changer la photo / vidéo
+                    Changer la photo / vidéo principale
                   </Button>
                 </div>
               </div>
+            </div>
+
+            {/* Gallery & Slider Images Management */}
+            <div className="space-y-3 pt-2 border-t border-black/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#4A94D1]" />
+                    Galerie du Slider — Images défilantes ({editingService.gallery_urls?.length || 0})
+                  </label>
+                  <p className="text-[11px] text-[#5F6673]">
+                    Ajoutez, réordonnez ou supprimez les images qui composent le carrousel défilant de la page de ce service.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Plus size={14} />}
+                  onClick={() => setMediaPickerTarget({ type: 'gallery_add' })}
+                >
+                  Ajouter depuis la médiathèque
+                </Button>
+              </div>
+
+              {/* Quick Add by URL */}
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Ou coller l'URL d'une image à ajouter au slider (https://...)..."
+                  value={newGalleryUrl}
+                  onChange={(e) => setNewGalleryUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddGalleryUrlInput();
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddGalleryUrlInput}
+                  disabled={!newGalleryUrl.trim()}
+                >
+                  Ajouter URL
+                </Button>
+              </div>
+
+              {/* Gallery Images List */}
+              {editingService.gallery_urls && editingService.gallery_urls.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {editingService.gallery_urls.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-[#F5F7FA] border border-black/10 transition-all hover:border-[#4A94D1]/40"
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative w-16 h-12 rounded-lg overflow-hidden border border-black/10 shrink-0 bg-black">
+                        <MediaDisplay
+                          imageUrl={imgUrl}
+                          imageAlt={`Slide #${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          aspectRatioClassName="aspect-[4/3]"
+                          autoPlay={false}
+                          loop={false}
+                          muted={true}
+                          showControls={false}
+                        />
+                        <span className="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-black/80 text-white text-[9px] font-mono font-bold">
+                          #{idx + 1}
+                        </span>
+                      </div>
+
+                      {/* Info & Actions */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-mono text-[#5F6673] truncate" title={imgUrl}>
+                          {imgUrl}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          {/* Move Up */}
+                          <button
+                            type="button"
+                            onClick={() => handleMoveGalleryImage(idx, 'up')}
+                            disabled={idx === 0}
+                            className="p-1 rounded-md bg-white border border-black/10 text-[#5F6673] hover:text-[#111111] hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            title="Déplacer vers la gauche / haut"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+
+                          {/* Move Down */}
+                          <button
+                            type="button"
+                            onClick={() => handleMoveGalleryImage(idx, 'down')}
+                            disabled={idx === (editingService.gallery_urls?.length || 1) - 1}
+                            className="p-1 rounded-md bg-white border border-black/10 text-[#5F6673] hover:text-[#111111] hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            title="Déplacer vers la droite / bas"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+
+                          {/* Replace */}
+                          <button
+                            type="button"
+                            onClick={() => setMediaPickerTarget({ type: 'gallery_replace', index: idx })}
+                            className="px-2 py-1 rounded-md bg-white border border-black/10 text-[#5F6673] hover:text-[#4A94D1] hover:bg-black/5 text-[10px] font-semibold transition-all inline-flex items-center gap-1"
+                            title="Remplacer cette image"
+                          >
+                            <Edit2 size={11} />
+                            <span>Remplacer</span>
+                          </button>
+
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGalleryImage(idx)}
+                            className="p-1 rounded-md bg-white border border-black/10 text-red-500 hover:text-red-700 hover:bg-red-50 transition-all ml-auto"
+                            title="Supprimer du slider"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-dashed border-black/15 bg-white text-center space-y-1">
+                  <p className="text-xs font-semibold text-[#111111]">Aucune image dans le slider</p>
+                  <p className="text-[11px] text-[#5F6673]">
+                    Le slider de la page de service affichera l'image illustrative principale. Cliquez sur « Ajouter depuis la médiathèque » pour enrichir la galerie.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Prestations Management */}
@@ -340,16 +535,22 @@ export const AdminServicesPage: React.FC = () => {
       )}
 
       {/* Media Picker Modal */}
-      {isMediaPickerOpen && (
+      {mediaPickerTarget !== null && (
         <MediaPickerModal
           isOpen={true}
-          onClose={() => setIsMediaPickerOpen(false)}
+          onClose={() => setMediaPickerTarget(null)}
           onSelect={(selected) => {
             if (editingService) {
               const url = typeof selected === 'string' ? selected : selected.url;
-              setEditingService({ ...editingService, featured_image_url: url });
+              if (mediaPickerTarget.type === 'featured') {
+                setEditingService({ ...editingService, featured_image_url: url });
+              } else if (mediaPickerTarget.type === 'gallery_add') {
+                handleAddGalleryImage(url);
+              } else if (mediaPickerTarget.type === 'gallery_replace') {
+                handleReplaceGalleryImage(mediaPickerTarget.index, url);
+              }
             }
-            setIsMediaPickerOpen(false);
+            setMediaPickerTarget(null);
           }}
         />
       )}
