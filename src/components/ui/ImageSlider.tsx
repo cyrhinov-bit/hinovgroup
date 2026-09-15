@@ -406,3 +406,4 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
     </div>
   );
 };
+
