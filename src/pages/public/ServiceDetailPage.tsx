@@ -95,8 +95,8 @@ export const ServiceDetailPage: React.FC = () => {
               images={sliderImages}
               alt={`Galerie ${service.name}`}
               badgeLabel={`Galerie du pôle • ${service.name}`}
-              aspectRatioClassName="h-[170px] sm:h-[220px] md:h-[250px] w-full"
-              roundedClassName="rounded-xl shadow-md border border-black/10"
+              aspectRatioClassName="h-[210px] sm:h-[280px] md:h-[320px] w-full"
+              roundedClassName="rounded-2xl shadow-lg border border-black/10"
               autoPlay={true}
               autoPlayInterval={4500}
               showThumbnails={false}
