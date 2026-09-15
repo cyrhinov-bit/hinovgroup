@@ -59,19 +59,19 @@ export const ServiceDetailPage: React.FC = () => {
 
   // Build the complete array of slider images
   const sliderImages = React.useMemo(() => {
-    const list: string[] = [];
-    if (service.featured_image_url) {
-      list.push(service.featured_image_url);
+    if (service.gallery_urls && Array.isArray(service.gallery_urls) && service.gallery_urls.length > 0) {
+      const valid = service.gallery_urls
+        .map((u) => (typeof u === 'string' ? u.trim() : (u as any)?.url || ''))
+        .filter((u) => Boolean(u));
+      if (valid.length > 0) {
+        return valid;
+      }
     }
-    if (service.gallery_urls && Array.isArray(service.gallery_urls)) {
-      service.gallery_urls.forEach((url) => {
-        if (url && typeof url === 'string' && !list.includes(url)) {
-          list.push(url);
-        }
-      });
-    }
-    return list.length > 0
-      ? list
+    const fallbackList = service.featured_image_url
+      ? [typeof service.featured_image_url === 'string' ? service.featured_image_url.trim() : (service.featured_image_url as any)?.url || '']
+      : [];
+    return fallbackList.filter(Boolean).length > 0
+      ? fallbackList.filter(Boolean)
       : [
           'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
         ];

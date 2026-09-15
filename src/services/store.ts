@@ -204,12 +204,24 @@ class StoreService {
 
         const storedServices = (parsed.services || INITIAL_SERVICES).map((s: any) => {
           const initService = INITIAL_SERVICES.find((is) => is.id === s.id);
-          const rawGallery = Array.isArray(s.gallery_urls) && s.gallery_urls.length > 0
-            ? s.gallery_urls
-            : initService?.gallery_urls || [];
+          let rawGallery: any[] = [];
+          if (Array.isArray(s.gallery_urls) && s.gallery_urls.length > 0) {
+            rawGallery = s.gallery_urls;
+          } else if (typeof s.gallery_urls === 'string' && s.gallery_urls.trim().length > 0) {
+            try {
+              rawGallery = JSON.parse(s.gallery_urls);
+            } catch {
+              rawGallery = s.gallery_urls.replace(/[{}]/g, '').split(',').map((x: string) => x.trim()).filter(Boolean);
+            }
+          }
+
+          if (rawGallery.length === 0) {
+            rawGallery = initService?.gallery_urls || [];
+          }
+
           const cleanGallery = rawGallery
             .map((u: any) => ensureStringUrl(u))
-            .filter((u: string) => Boolean(u) && !u.startsWith('blob:'));
+            .filter((u: string) => Boolean(u));
 
           return {
             ...s,
@@ -353,10 +365,33 @@ class StoreService {
       }
 
       if (servicesRes.data && servicesRes.data.length > 0) {
-        this.state.services = servicesRes.data.map((s: any) => ({
-          ...s,
-          featured_image_url: cleanMediaUrl(s.featured_image_url, DEFAULT_SERVICE_MEDIA[s.slug] || s.featured_image_url),
-        }));
+        this.state.services = servicesRes.data.map((s: any) => {
+          const localService = this.state.services.find((cs) => cs.id === s.id);
+          const initService = INITIAL_SERVICES.find((is) => is.id === s.id);
+
+          let remoteGallery: string[] = [];
+          if (Array.isArray(s.gallery_urls) && s.gallery_urls.length > 0) {
+            remoteGallery = s.gallery_urls;
+          } else if (typeof s.gallery_urls === 'string' && s.gallery_urls.trim().length > 0) {
+            try {
+              remoteGallery = JSON.parse(s.gallery_urls);
+            } catch {
+              remoteGallery = s.gallery_urls.replace(/[{}]/g, '').split(',').map((x: string) => x.trim()).filter(Boolean);
+            }
+          }
+
+          const finalGallery = remoteGallery.length > 0
+            ? remoteGallery
+            : (localService?.gallery_urls && localService.gallery_urls.length > 0
+                ? localService.gallery_urls
+                : initService?.gallery_urls || []);
+
+          return {
+            ...s,
+            featured_image_url: cleanMediaUrl(s.featured_image_url, DEFAULT_SERVICE_MEDIA[s.slug] || s.featured_image_url),
+            gallery_urls: finalGallery.map((u: any) => ensureStringUrl(u)).filter(Boolean),
+          };
+        });
       }
 
       if (categoriesRes.data && categoriesRes.data.length > 0) {
@@ -902,7 +937,7 @@ class StoreService {
     if ('gallery_urls' in sanitizedUpdates && Array.isArray(sanitizedUpdates.gallery_urls)) {
       sanitizedUpdates.gallery_urls = sanitizedUpdates.gallery_urls
         .map((u: any) => ensureStringUrl(u))
-        .filter((u: string) => Boolean(u) && !u.startsWith('blob:'));
+        .filter((u: string) => Boolean(u));
     }
     this.state.services[index] = {
       ...this.state.services[index],
@@ -921,7 +956,7 @@ class StoreService {
     const cleanGallery = Array.isArray(newService.gallery_urls)
       ? newService.gallery_urls
           .map((u: any) => ensureStringUrl(u))
-          .filter((u: string) => Boolean(u) && !u.startsWith('blob:'))
+          .filter((u: string) => Boolean(u))
       : [];
 
     const service: ServiceItem = {
